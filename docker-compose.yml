@@ -1,0 +1,17 @@
+
+version: '3.8'
+services:
+  selenium:
+    image: selenium/standalone-chrome:latest
+    container_name: selenium
+    platform: linux/amd64
+    shm_size: 2g
+    ports:
+      - "4444:4444"
+
+  scraper:
+    build: .
+    container_name: scraper
+    depends_on:
+      - selenium
+    command: python3 main.py

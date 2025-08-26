@@ -3,16 +3,19 @@
 
 import re
 import time
+import logging
 from typing import List, Optional
 
 from bs4 import BeautifulSoup, Tag
+from selenium.common.exceptions import TimeoutException
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.remote.webdriver import WebDriver
+import config # 導入 config 模組
 
 # --- Constants ---
-MAX_RETRIES = 5
-RETRY_DELAY_SECONDS = 2
+MAX_RETRIES = 10
+# RETRY_DELAY_SECONDS = 2 # 已移至 config.py
 
 class Product:
     """Represents a product scraped from the website."""
@@ -36,6 +39,9 @@ class PulamoScraper:
         """Initializes the scraper and the Selenium WebDriver."""
         self.grid_url = grid_url
         self.driver = self._initialize_driver()
+        if self.driver:
+            self.driver.set_page_load_timeout(120) # 增加頁面加載超時到 120 秒
+            self.driver.implicitly_wait(10) # 增加隱式等待到 10 秒
 
     def _initialize_driver(self) -> Optional[WebDriver]:
         """
@@ -53,18 +59,18 @@ class PulamoScraper:
 
         for attempt in range(MAX_RETRIES):
             try:
-                print(f"[INFO] Attempting to connect to Selenium Grid (Attempt {attempt + 1}/{MAX_RETRIES})...")
+                logging.info(f"Connecting to Selenium Grid (Attempt {attempt + 1}/{MAX_RETRIES})...")
                 driver = webdriver.Remote(
                     command_executor=self.grid_url, options=chrome_options
                 )
-                print("[INFO] Successfully connected to Selenium Grid!")
+                logging.info("Successfully connected to Selenium Grid!")
                 return driver
             except Exception as e:
                 if attempt < MAX_RETRIES - 1:
-                    print(f"[WARN] Connection failed. Retrying in {RETRY_DELAY_SECONDS} seconds...")
-                    time.sleep(RETRY_DELAY_SECONDS)
+                    logging.warning(f"Connection failed. Retrying in {config.RETRY_DELAY_SECONDS} seconds...")
+                    time.sleep(config.RETRY_DELAY_SECONDS)
                 else:
-                    print(f"\n[ERROR] Could not connect to Selenium Grid after {MAX_RETRIES} attempts: {e}")
+                    logging.error(f"Could not connect to Selenium Grid after {MAX_RETRIES} attempts: {e}", exc_info=True)
                     return None
         return None
 
@@ -74,28 +80,33 @@ class PulamoScraper:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def get_products_from_search(self, base_url: str, search_term: str) -> List[Product]:
+    def get_products_from_search(self, url: str) -> List[Product]:
         """
         Fetches the search result page and parses all products.
-
-        Args:
-            base_url: The base URL of the website.
-            search_term: The term to search for.
-
-        Returns:
-            A list of Product objects found on the page.
         """
         if not self.driver:
-            print("[ERROR] WebDriver not initialized. Cannot scrape.")
+            logging.error("WebDriver not initialized. Cannot scrape.")
             return []
 
-        url = f"{base_url}?search={search_term}"
-        print(f"[INFO] Scraping URL: {url}")
-        self.driver.get(url)
-        time.sleep(3)  # Wait for dynamic content to load
+        for attempt in range(MAX_RETRIES):
+            try:
+                logging.info(f"Scraping URL: {url} (Attempt {attempt + 1}/{MAX_RETRIES})")
+                self.driver.get(url)
+                break  # Success, exit the loop
+            except TimeoutException:
+                if attempt < MAX_RETRIES - 1:
+                    logging.warning(f"Timeout loading page {url}. Retrying in {config.RETRY_DELAY_SECONDS} seconds...")
+                    time.sleep(config.RETRY_DELAY_SECONDS)
+                else:
+                    logging.error(f"Failed to load page {url} after {MAX_RETRIES} attempts.")
+                    return []
 
         soup = BeautifulSoup(self.driver.page_source, 'html.parser')
         product_cards = soup.find_all('div', class_='meepshop-meep-ui__productList-index__productCard')
+
+        if not product_cards:
+            logging.info(f"在 {url} 上沒有找到任何商品卡片。")
+            return []
 
         products = []
         for card in product_cards:
@@ -120,11 +131,14 @@ class PulamoScraper:
 
             return Product(title=title, price=price, in_stock=in_stock)
         except (AttributeError, ValueError) as e:
-            print(f"[WARN] Could not parse a product card: {e}")
+            logging.warning(f"Could not parse a product card: {e}")
             return None
 
     def close(self):
         """Closes the browser and quits the driver."""
         if self.driver:
-            print("[INFO] Task finished. Closing browser.")
-            self.driver.quit()
+            try:
+                logging.info("Task finished. Closing browser.")
+                self.driver.quit()
+            except Exception as e:
+                logging.error(f"Error while closing WebDriver: {e}", exc_info=True)

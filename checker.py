@@ -1,28 +1,27 @@
 
 # checker.py
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 from scraper import Product
 
-def check_product(
+def find_target_product(
     products: List[Product],
-    spec: Dict,
-    test_mode: bool = False
-) -> None:
+    spec: Dict
+) -> Optional[Product]:
     """
-    A generic function to check for a product based on a specification.
+    Finds a product that matches the given specification.
 
     Args:
         products: A list of scraped Product objects.
         spec: A dictionary containing the product specification.
-        test_mode: A flag to indicate if this is a test case.
+
+    Returns:
+        The first matching Product object if found and in stock, otherwise None.
     """
-    product_name = spec["name"]
     keywords = spec["keywords"]
     exclude_keywords = spec.get("exclude_keywords", [])
     min_price = spec.get("min_price", 0)
     
-    found = False
     for product in products:
         # Check if all keywords are in the title
         if not all(keyword in product.title for keyword in keywords):
@@ -38,11 +37,6 @@ def check_product(
 
         # If all conditions met, this is our target product
         if product.in_stock:
-            suffix = " (測試案例)" if test_mode else ""
-            print(f"{product_name}有貨{suffix}")
-            found = True
-            break
+            return product  # Return the found product
     
-    if not found:
-        status = "(測試案例) 已售完或未上架" if test_mode else "或已售完/未發售"
-        print(f"未找到符合條件的 {product_name} {status}")
+    return None # Return None if no matching product is found

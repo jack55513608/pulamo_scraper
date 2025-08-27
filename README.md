@@ -1,4 +1,3 @@
-
 # Pulamo 商品監控爬蟲
 
 ## 1. 專案目標
@@ -16,7 +15,7 @@
 ## 2. 技術棧
 
 - **Python**: 主要的程式語言。
-- **Selenium**: 用於驅動瀏覽器，抓取動態加載的網頁內容。
+- **Selenium & Selenium Grid**: 用於建立分散式的瀏覽器驅動環境，抓取動態加載的網頁內容。
 - **BeautifulSoup4**: 用於解析 HTML，提取所需資訊。
 - **Docker & Docker Compose**: 用於建立一個獨立、可重複的執行環境，簡化部署與執行流程。
 - **Pytest**: 用於執行單元測試。
@@ -28,7 +27,9 @@
 ### 步驟 1: 環境需求
 
 - 請確保你的電腦已安裝最新版的 Docker 與 Docker Compose。
-- **Apple Silicon (ARM64) 用戶請注意**: 本專案的 `docker-compose.yml` 預設使用 x86/amd64 架構的 Selenium 映像檔。為了解決在 ARM64 架構下的相容性問題，測試環境已改用 `seleniarm/standalone-chromium` 映像檔。如果您需要在 ARM64 架構下執行主程式，請參考 `docker-compose.test.yml` 的設定來修改 `docker-compose.yml`。
+- 本專案現在使用 **Selenium Grid** 架構，包含一個 Hub (主控中心) 和多個可擴展的 Node (瀏覽器節點)。這允許更穩定且可平行處理的監控任務。
+- `docker-compose.yml` 使用官方的 `selenium/` 映像檔，支援多種平台。
+- `docker-compose.test.yml` 為了 ARM64 架構 (如 Apple Silicon) 的相容性，使用了 `seleniarm/` 系列的映像檔。
 
 ### 步驟 2: 設定監控目標 (可選)
 
@@ -39,6 +40,7 @@
 # config.py
 WING_GUNDAM_SPEC = {
     "name": "飛翼鋼彈",
+    "store_name": "Pulamo",
     "keywords": ["MGSD", "飛翼鋼彈"],
     "exclude_keywords": ["水貼", "遮蓋膠帶"],
     "search_url": "https://www.pulamo.com.tw/products?search=MGSD",
@@ -47,26 +49,106 @@ WING_GUNDAM_SPEC = {
 
 ### 步驟 3: 啟動主要監控程式
 
-此指令會啟動持續監控服務，檢查 `config.py` 中定義的主要目標商品（飛翼、命運鋼彈）。
+此指令會啟動 Selenium Grid 和持續監控服務。
 
 ```bash
-# 此指令會建立 Docker 映像檔並啟動所有服務
-docker-compose up --build
+# 建立 Docker 映像檔並啟動所有服務 (背景執行)
+docker-compose up --build -d
+```
+
+若要停止服務：
+```bash
+docker-compose down
+```
+
+#### 擴展瀏覽器節點
+
+如果需要同時執行更多爬蟲任務，可以輕易地增加 Chrome 瀏覽器節點的數量：
+
+```bash
+# 將 Chrome 節點擴展到 3 個
+docker-compose up --scale chrome=3 -d
+```
+
+### 步驟 4: 其他指令
+
+#### 只啟動 Selenium Grid
+
+如果您只想啟動 Selenium Grid (主控中心和瀏覽器節點) 以便進行開發或執行臨時任務，而不啟動主要的監控爬蟲，可以使用以下指令：
+
+```bash
+docker-compose up -d selenium chrome
+```
+
+Grid 啟動後，您可以執行任意需要瀏覽器的腳本。
+
+#### 手動抓取網頁 HTML
+
+本專案提供一個 `dumper` 服務，可以用來抓取指定網址的 HTML 內容，非常適合用於臨時的網頁結構分析或除錯。
+
+**使用方式：**
+
+```bash
+# 請先確保 Selenium Grid 正在運行
+docker-compose run --rm dumper python3 html_dumper.py <您要抓取的網址>
+```
+
+**範例：**
+
+```bash
+docker-compose run --rm dumper python3 html_dumper.py https://www.pulamo.com.tw/
 ```
 
 ---
 
 ## 4. 如何測試
 
-本專案包含兩種測試方式：
+本專案包含兩種主要測試方式：
 
-### 整合測試 (獵魔鋼彈測試案例)
+### 1. 純單元測試 (不需 Docker 環境)
 
-這會模擬一次性的完整爬蟲流程，用來檢查「MGSD 獵魔鋼彈」。它會建立獨立的測試環境，執行完畢後自動清理，並且會發送真實的 Telegram 通知。
+這些測試用於快速驗證獨立的函式邏輯，不依賴於 Docker 或 Selenium Grid。
 
 ```bash
-# 執行此指令來啟動整合測試
-docker-compose -f docker-compose.test.yml down --remove-orphans && docker-compose -f docker-compose.test.yml run --build --rm debugger && docker-compose -f docker-compose.test.yml down --remove-orphans
+# 執行所有不需 Docker 環境的單元測試
+pytest -m "not docker"
+```
+
+### 2. 功能測試與整合測試 (需 Docker 環境)
+
+這些測試用於驗證應用程式在實際環境中的行為，需要 Selenium Grid 運行。
+
+#### 啟動測試環境
+
+在執行以下測試前，請確保您的 Selenium Grid 服務已啟動。您可以選擇啟動主要環境的 Grid，或專門為測試啟動一個獨立的 Grid。
+
+```bash
+# 啟動主要環境的 Selenium Grid (如果尚未運行)
+docker-compose up -d selenium chrome
+```
+
+#### 執行所有需要 Docker 的測試
+
+這會執行所有標記為 `docker` 的測試案例，例如 Pulamo 爬蟲的功能測試。
+
+```bash
+# 在 Docker 容器內部執行所有需要 Docker 環境的測試
+docker-compose run --rm scraper pytest -m docker
+```
+
+#### 整合測試 (獵魔鋼彈測試案例)
+
+這會使用獨立的測試用 Selenium Grid 來模擬一次性的完整爬蟲流程，檢查「MGSD 獵魔鋼彈」。
+
+```bash
+# 啟動測試環境並執行測試
+docker-compose -f docker-compose.test.yml up --build -d
+
+# 查看 debugger 服務的日誌來確認結果
+docker-compose -f docker-compose.test.yml logs -f debugger
+
+# 測試完畢後關閉測試環境
+docker-compose -f docker-compose.test.yml down
 ```
 
 預期結果範例 (若商品未上架):
@@ -76,18 +158,6 @@ docker-compose -f docker-compose.test.yml down --remove-orphans && docker-compos
 --- 商品狀態檢查結束 (測試案例) ---
 ```
 
-### 單元測試 (Pytest)
-
-這會執行所有位於 `test_*.py` 中的單元測試，用來快速驗證獨立的函式邏輯是否正確。
-
-```bash
-# 1. 安裝 pytest
-pip install pytest
-
-# 2. 執行測試
-pytest
-```
-
 ---
 
 ## 5. 專案結構
@@ -95,12 +165,26 @@ pytest
 - `main.py`: 主要監控程式的進入點。
 - `main_debug.py`: 「獵魔鋼彈」測試案例的進入點。
 - `config.py`: 存放所有可變的設定，例如 URL 和商品規格。
-- `scraper.py`: 包含 `PulamoScraper` 類別，專門負責抓取和解析網頁資料。
-- `checker.py`: 包含所有檢查商品是否符合條件的商業邏輯。
-- `notifier.py`: 負責發送 Telegram 通知的模組。
-- `docker-compose.yml`: 定義和管理**主要監控服務**的 Docker 設定。
-- `docker-compose.test.yml`: 定義和管理**整合測試**的 Docker 設定。
+- `models.py`: 定義專案中使用的資料模型，例如 `Product`。
+- `factory.py`: 負責動態載入和實例化各種插件 (Scraper, Checker, Notifier)。
+- `scrapers/`: 存放所有網站的爬蟲插件。
+    - `base.py`: 爬蟲插件的抽象基礎類別。
+    - `pulamo.py`: 針對 Pulamo 網站的爬蟲實作。
+- `checkers/`: 存放所有商品檢查邏輯的插件。
+    - `base.py`: 檢查邏輯插件的抽象基礎類別。
+    - `product.py`: 針對商品關鍵字和價格的檢查實作。
+- `notifiers/`: 存放所有通知模組的插件。
+    - `base.py`: 通知模組插件的抽象基礎類別。
+    - `telegram.py`: 針對 Telegram 的通知實作。
+- `html_dumper.py`: 提供手動抓取指定網頁 HTML 內容的功能。
+- `docker-compose.yml`: 定義和管理**主要監控服務**的 Docker 設定 (使用 Selenium Grid)。
+- `docker-compose.test.yml`: 定義和管理**整合測試**的 Docker 設定 (使用 Selenium Grid)。
 - `Dockerfile`: 建立 Python 應用程式 Docker 映像檔的說明書。
 - `requirements.txt`: Python 依賴套件列表。
-- `test_*.py`: Pytest 單元測試檔案。
+- `tests/`: 存放所有單元測試和功能測試檔案。
+    - `test_checker.py`: 針對商品檢查邏輯的單元測試。
+    - `test_notifier.py`: 針對通知模組的單元測試。
+    - `test_scrapers_pulamo.py`: 針對 Pulamo 爬蟲的功能測試。
+    - `test_scrapers_pulamo_unit.py`: 針對 Pulamo 爬蟲的單元測試。
+    - `test_factory.py`: 針對工廠模式的單元測試。
 - `README.md`: 本說明文件。

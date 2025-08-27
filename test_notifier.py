@@ -1,44 +1,71 @@
-
 # test_notifier.py
-
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
-from notifier import send_telegram_message
+from unittest.mock import AsyncMock, patch
+from notifiers.telegram import TelegramNotifier
+from models import Product
 from telegram.error import TelegramError
+import config
 
-class TestNotifier(unittest.IsolatedAsyncioTestCase):
+class TestTelegramNotifier(unittest.IsolatedAsyncioTestCase):
 
-    async def test_send_message_successfully(self):
+    @patch('notifiers.telegram.Bot')
+    async def test_notify_successfully(self, MockBot):
         """Test that the bot's send_message method is called correctly."""
-        mock_bot = AsyncMock()
-        chat_id = "12345"
-        message = "Hello, Test!"
+        mock_bot_instance = AsyncMock()
+        MockBot.return_value = mock_bot_instance
+        
+        # Mock config values
+        config.TELEGRAM_BOT_TOKEN = "fake_token"
+        config.TELEGRAM_CHAT_ID = "12345"
 
-        with patch('notifier.datetime') as mock_datetime:
-            mock_datetime.now.return_value.strftime.return_value = "2025-08-26 23:00:00 CST+0800"
-            result = await send_telegram_message(mock_bot, chat_id, message)
+        notifier = TelegramNotifier()
+        product = Product(title="Test Product", price=100, in_stock=True, url="http://example.com")
+        params = {'name': 'Test', 'store_name': 'Test Store'}
 
-        full_message = f"[2025-08-26 23:00:00 CST+0800] {message}"
-        mock_bot.send_message.assert_called_once_with(chat_id=chat_id, text=full_message)
-        self.assertTrue(result)
+        await notifier.notify(product, params)
 
-    async def test_send_message_handles_telegram_error(self):
-        """Test that the function handles TelegramError gracefully."""
-        mock_bot = AsyncMock()
-        mock_bot.send_message.side_effect = TelegramError("Test Error")
+        self.assertTrue(mock_bot_instance.send_message.called)
+        call_args = mock_bot_instance.send_message.call_args
+        self.assertEqual(call_args.kwargs['chat_id'], "12345")
+        self.assertIn("Test Product", call_args.kwargs['text'])
+        self.assertIn("Test Store", call_args.kwargs['text'])
+        self.assertEqual(call_args.kwargs['parse_mode'], 'HTML')
 
-        chat_id = "12345"
-        message = "Hello, Error!"
+    @patch('notifiers.telegram.Bot')
+    async def test_notify_handles_telegram_error(self, MockBot):
+        """Test that the notifier handles TelegramError gracefully."""
+        mock_bot_instance = AsyncMock()
+        mock_bot_instance.send_message.side_effect = TelegramError("Test Error")
+        MockBot.return_value = mock_bot_instance
 
-        result = await send_telegram_message(mock_bot, chat_id, message)
+        config.TELEGRAM_BOT_TOKEN = "fake_token"
+        config.TELEGRAM_CHAT_ID = "12345"
 
-        mock_bot.send_message.assert_called_once()
-        self.assertFalse(result)
+        notifier = TelegramNotifier()
+        product = Product(title="Test Product", price=100, in_stock=True, url="http://example.com")
+        params = {'name': 'Test', 'store_name': 'Test Store'}
 
-    async def test_send_message_with_no_bot(self):
-        """Test that the function handles having no bot instance."""
-        result = await send_telegram_message(None, "12345", "No bot")
-        self.assertFalse(result)
+        # This should not raise an exception
+        await notifier.notify(product, params)
+        
+        mock_bot_instance.send_message.assert_called_once()
+
+    @patch('notifiers.telegram.Bot')
+    async def test_notify_with_no_chat_id(self, MockBot):
+        """Test that notify does not send if chat_id is missing."""
+        mock_bot_instance = AsyncMock()
+        MockBot.return_value = mock_bot_instance
+
+        config.TELEGRAM_BOT_TOKEN = "fake_token"
+        config.TELEGRAM_CHAT_ID = None # No chat ID
+
+        notifier = TelegramNotifier()
+        product = Product(title="Test Product", price=100, in_stock=True, url="http://example.com")
+        params = {}
+
+        await notifier.notify(product, params)
+
+        mock_bot_instance.send_message.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()

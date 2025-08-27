@@ -1,11 +1,10 @@
 version: '3.8'
 services:
-  selenium:
-    image: seleniarm/standalone-chromium
-    container_name: selenium-test-instance
-    shm_size: 2g
+  selenium: # 測試用的 Hub
+    image: seleniarm/hub
+    container_name: selenium-test-hub
     ports:
-      - "4445:4444"
+      - "4445:4444" # 外部端口為 4445，避免衝突
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
       interval: 10s
@@ -13,11 +12,23 @@ services:
       retries: 5
       start_period: 30s
 
+  chrome: # 測試用的 Chrome 節點
+    image: seleniarm/node-chromium
+    shm_size: 2g
+    depends_on:
+      selenium:
+        condition: service_healthy
+    environment:
+      - SE_EVENT_BUS_HOST=selenium
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
   debugger:
     build: .
     container_name: debugger-test-instance
     env_file:
       - .env
     depends_on:
-      - selenium
+      selenium:
+        condition: service_healthy
     command: python3 main_debug.py

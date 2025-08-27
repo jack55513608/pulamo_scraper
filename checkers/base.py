@@ -6,6 +6,9 @@ from models import Product
 class BaseChecker(ABC):
     """Abstract base class for all checkers."""
 
+    def __init__(self, *args, **kwargs):
+        pass
+
     @abstractmethod
     def check(self, products: List[Product], params: dict) -> Optional[Product]:
         """

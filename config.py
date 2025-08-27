@@ -52,12 +52,33 @@ TASKS = [
             'store_name': 'Pulamo',
         },
     },
+    {
+        'name': 'Ruten - Destiny Gundam',
+        'type': 'ruten',
+        'search_scraper': 'ruten.RutenSearchScraper',
+        'search_scraper_params': {
+            'search_url': 'https://www.ruten.com.tw/find/?q=mgsd+%E5%91%BD%E9%81%8B&prc.now=900-1400',
+        },
+        'keyword_checker': 'keyword.KeywordChecker',
+        'keyword_checker_params': {
+            'keywords': ['mgsd', '命運鋼彈'],
+            'exclude_keywords': ['魔物語', 'ps5', 'ns2'] # Exclude game pre-orders
+        },
+        'page_scraper': 'ruten.RutenProductPageScraper',
+        'stock_checker': 'stock.StockChecker',
+        'notifier': 'telegram.TelegramNotifier',
+        'notifier_params': {
+            'name': 'MGSD 命運鋼彈',
+            'store_name': '露天拍賣',
+        },
+    },
 ]
 
 # --- Test Task Definitions ---
 TEST_TASKS = [
     {
         'name': 'Pulamo - Barbatos Gundam (Test)',
+        'type': 'simple', # Add type for test tasks
         'scraper': 'pulamo.PulamoScraper',
         'scraper_params': {
             'search_url': 'https://www.pulamo.com.tw/products?search=MGSD',

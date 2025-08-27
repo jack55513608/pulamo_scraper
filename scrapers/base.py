@@ -33,11 +33,9 @@ class BaseScraper(ABC):
         # Assuming MAX_RETRIES is defined in config.py
         for attempt in range(getattr(config, 'MAX_RETRIES', 10)):
             try:
-                logging.info(f"Connecting to Selenium Grid (Attempt {attempt + 1}/{getattr(config, 'MAX_RETRIES', 10)})...")
                 driver = webdriver.Remote(
                     command_executor=self.grid_url, options=chrome_options
                 )
-                logging.info("Successfully connected to Selenium Grid!")
                 return driver
             except Exception as e:
                 if attempt < getattr(config, 'MAX_RETRIES', 10) - 1:
@@ -57,7 +55,6 @@ class BaseScraper(ABC):
     def close(self):
         if self.driver:
             try:
-                logging.info("Task finished. Closing browser.")
                 self.driver.quit()
             except Exception as e:
                 logging.error(f"Error while closing WebDriver: {e}", exc_info=True)

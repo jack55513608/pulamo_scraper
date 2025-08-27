@@ -33,7 +33,7 @@ class TelegramNotifier(BaseNotifier):
         now = datetime.now(taipei_tz)
         timestamp = now.strftime('%Y-%m-%d %H:%M:%S %Z%z')
 
-        message = f"[{timestamp}] \n店家: {store_name}\n商品: {product_name}有貨\n商品名稱: {product.title}\n價格: {product.price}"
+        message = f"[{timestamp}]\n店家: {store_name}\n商品: {product.title}\n價格: {product.price}\n狀態: 有貨"
         message += f'\n<a href="{product.url}">點此查看商品頁面</a>'
 
         try:

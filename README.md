@@ -2,7 +2,7 @@
 
 ## 1. 專案目標
 
-本專案旨在監控 [弘德模型 (Pulamo)](https://www.pulamo.com.tw/) 網站，自動化地檢查特定商品的庫存狀態。
+本專案旨在監控 [弘德模型 (Pulamo)](https://www.pulamo.com.tw/) 及 [露天拍賣 (Ruten)](https://www.ruten.com.tw/) 網站，自動化地檢查特定商品的庫存狀態。
 
 目前監控的目標商品為：
 1.  **MGSD 飛翼鋼彈**: 監控模型本體是否有貨。
@@ -36,14 +36,53 @@
 所有監控的商品都定義在 `config.py` 檔案中。你可以修改此檔案來新增或變更監控目標。
 
 一個商品的設定規格如下：
+
+**簡單任務 (例如 Pulamo):**
 ```python
 # config.py
-WING_GUNDAM_SPEC = {
-    "name": "飛翼鋼彈",
-    "store_name": "Pulamo",
-    "keywords": ["MGSD", "飛翼鋼彈"],
-    "exclude_keywords": ["水貼", "遮蓋膠帶"],
-    "search_url": "https://www.pulamo.com.tw/products?search=MGSD",
+{
+    'name': 'Pulamo - Wing Gundam',
+    'scraper': 'pulamo.PulamoScraper',
+    'scraper_params': {
+        'search_url': 'https://www.pulamo.com.tw/products?search=MGSD',
+    },
+    'checker': 'product.ProductChecker',
+    'checker_params': {
+        'name': '飛翼鋼彈',
+        'store_name': 'Pulamo',
+        'keywords': ['MGSD', '飛翼鋼彈'],
+        'exclude_keywords': ['水貼', '遮蓋膠帶'],
+    },
+    'notifier': 'telegram.TelegramNotifier',
+    'notifier_params': {
+        'name': '飛翼鋼彈',
+        'store_name': 'Pulamo',
+    },
+}
+```
+
+**多步驟任務 (例如 Ruten):**
+```python
+# config.py
+{
+    'name': 'Ruten - Destiny Gundam',
+    'type': 'ruten',
+    'search_scraper': 'ruten.RutenSearchScraper',
+    'search_scraper_params': {
+        'search_url': 'https://www.ruten.com.tw/find/?q=mgsd+%E5%91%BD%E9%81%8B&prc.now=900-1400',
+    },
+    'keyword_checker': 'keyword.KeywordChecker',
+    'keyword_checker_params': {
+        'keywords': ['mgsd', '命運鋼彈'],
+        'exclude_keywords': ['魔物語', 'ps5', 'ns2'] # Exclude game pre-orders
+    },
+    'page_scraper': 'ruten.RutenProductPageScraper',
+    'stock_checker': 'stock.StockChecker',
+    'notifier': 'telegram.TelegramNotifier',
+    'notifier_params': {
+        'name': 'MGSD 命運鋼彈',
+        'store_name': '露天拍賣',
+    },
 }
 ```
 
@@ -162,7 +201,7 @@ docker-compose -f docker-compose.test.yml down
 
 ## 5. 專案結構
 
-- `main.py`: 主要監控程式的進入點。
+- `main.py`: 主要監控程式的進入點，支援簡單和多步驟的任務類型。
 - `main_debug.py`: 「獵魔鋼彈」測試案例的進入點。
 - `config.py`: 存放所有可變的設定，例如 URL 和商品規格。
 - `models.py`: 定義專案中使用的資料模型，例如 `Product`。
@@ -170,9 +209,12 @@ docker-compose -f docker-compose.test.yml down
 - `scrapers/`: 存放所有網站的爬蟲插件。
     - `base.py`: 爬蟲插件的抽象基礎類別。
     - `pulamo.py`: 針對 Pulamo 網站的爬蟲實作。
+    - `ruten.py`: 針對露天拍賣網站的爬蟲實作，包含搜尋頁和商品頁的爬蟲。
 - `checkers/`: 存放所有商品檢查邏輯的插件。
     - `base.py`: 檢查邏輯插件的抽象基礎類別。
     - `product.py`: 針對商品關鍵字和價格的檢查實作。
+    - `keyword.py`: 根據關鍵字篩選商品的檢查器。
+    - `stock.py`: 檢查商品庫存狀態的檢查器。
 - `notifiers/`: 存放所有通知模組的插件。
     - `base.py`: 通知模組插件的抽象基礎類別。
     - `telegram.py`: 針對 Telegram 的通知實作。
@@ -186,5 +228,6 @@ docker-compose -f docker-compose.test.yml down
     - `test_notifier.py`: 針對通知模組的單元測試。
     - `test_scrapers_pulamo.py`: 針對 Pulamo 爬蟲的功能測試。
     - `test_scrapers_pulamo_unit.py`: 針對 Pulamo 爬蟲的單元測試。
+    - `test_ruten_unit.py`: 針對 Ruten 爬蟲的單元測試。
     - `test_factory.py`: 針對工廠模式的單元測試。
 - `README.md`: 本說明文件。

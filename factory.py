@@ -1,10 +1,15 @@
 # factory.py
-from typing import Type
+from typing import Type, Tuple, Dict, Any
 
 # Import all concrete classes
 from scrapers.pulamo import PulamoScraper
 from checkers.product import ProductChecker
 from notifiers.telegram import TelegramNotifier
+
+# Import new Ruten components
+from scrapers.ruten import RutenSearchScraper, RutenProductPageScraper
+from checkers.keyword import KeywordChecker
+from checkers.stock import StockChecker
 
 from scrapers.base import BaseScraper
 from checkers.base import BaseChecker
@@ -13,10 +18,14 @@ from notifiers.base import BaseNotifier
 # --- Registry of available classes ---
 SCRAPERS = {
     'pulamo.PulamoScraper': PulamoScraper,
+    'ruten.RutenSearchScraper': RutenSearchScraper,
+    'ruten.RutenProductPageScraper': RutenProductPageScraper,
 }
 
 CHECKERS = {
     'product.ProductChecker': ProductChecker,
+    'keyword.KeywordChecker': KeywordChecker,
+    'stock.StockChecker': StockChecker,
 }
 
 NOTIFIERS = {

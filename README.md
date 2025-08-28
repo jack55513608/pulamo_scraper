@@ -31,7 +31,29 @@
 - `docker-compose.yml` 使用官方的 `selenium/` 映像檔，支援多種平台。
 - `docker-compose.test.yml` 為了 ARM64 架構 (如 Apple Silicon) 的相容性，使用了 `seleniarm/` 系列的映像檔。
 
-### 步驟 2: 設定監控目標 (可選)
+### 步驟 2: 設定環境變數 (.env)
+
+若要使用 Telegram 通知功能，您需要設定必要的環境變數。
+
+請先將 `env.example` 檔案複製一份並重新命名為 `.env`：
+
+```bash
+cp env.example .env
+```
+
+接著，編輯 `.env` 檔案並填入您的個人資訊：
+
+```ini
+TELEGRAM_BOT_TOKEN="在此填入您的 Bot Token"
+TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
+```
+
+- `TELEGRAM_BOT_TOKEN`: 您從 BotFather 取得的 Telegram Bot Token。
+- `TELEGRAM_CHAT_ID`: 您希望接收通知的 Telegram 使用者或群組 ID。
+
+**注意**: 這個 `.env` 檔案已被加入 `.gitignore`，不會被上傳到 Git 儲存庫，以確保您的敏感資訊安全。
+
+### 步驟 3: 設定監控目標 (可選)
 
 所有監控的商品都定義在 `config.py` 檔案中。你可以修改此檔案來新增或變更監控目標。
 
@@ -86,7 +108,7 @@
 }
 ```
 
-### 步驟 3: 啟動主要監控程式
+### 步驟 4: 啟動主要監控程式
 
 此指令會啟動 Selenium Grid 和持續監控服務。
 
@@ -109,7 +131,7 @@ docker-compose down
 docker-compose up --scale chrome=3 -d
 ```
 
-### 步驟 4: 其他指令
+### 步驟 5: 其他指令
 
 #### 只啟動 Selenium Grid
 

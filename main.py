@@ -49,6 +49,7 @@ async def process_ruten_task(task: dict):
         'pages_failed': 0,
         'out_of_stock': 0,
         'rejected_due_to_price': 0,
+        'rejected_due_to_seller': 0,
     }
 
     try:
@@ -83,6 +84,7 @@ async def process_ruten_task(task: dict):
         found_product, stock_stats = stock_checker.check(detailed_products, task.get('stock_checker_params', {}))
         stats['out_of_stock'] = len(stock_stats['out_of_stock_titles'])
         stats['rejected_due_to_price'] = len(stock_stats.get('rejected_due_to_price', []))
+        stats['rejected_due_to_seller'] = len(stock_stats.get('rejected_due_to_seller', []))
 
         # Step 5: Notify if a product is found
         if found_product:
@@ -99,7 +101,8 @@ async def process_ruten_task(task: dict):
             f"Ruten任務總結: 搜尋到 {stats['total_searched']} 件商品. "
             f"關鍵字過濾掉 {stats['keyword_mismatch'] + stats['excluded_keyword']} 件. "
             f"成功抓取 {stats['pages_scraped']} 個頁面 ({stats['pages_failed']} 失敗). "
-            f"最終, {stats['rejected_due_to_price']} 件因價格過高被跳過, "
+            f"最終, {stats['rejected_due_to_price']} 件因價格過高, "
+            f"{stats['rejected_due_to_seller']} 件因賣家黑名單, "
             f"{stats['out_of_stock']} 件無庫存."
         )
         logging.info(summary)

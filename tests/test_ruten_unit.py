@@ -53,6 +53,16 @@ def sample_product_page_html_outofstock():
     '''
 
 @pytest.fixture
+def sample_product_page_with_seller_html():
+    return """
+    <html><body>
+        <div data-v-1e217fce>
+            <a data-v-1e217fce href="https://www.ruten.com.tw/store/good_seller_id"></a>
+        </div>
+    </body></html>
+    """
+
+@pytest.fixture
 def sample_products_for_filtering():
     return [
         Product(title="MGSD 命運鋼彈", price=1300, url="", in_stock=False),
@@ -65,9 +75,9 @@ def sample_products_for_filtering():
 @pytest.fixture
 def sample_products_for_stock_check():
     return [
-        Product(title="Product A", price=100, url="", in_stock=False),
-        Product(title="Product B", price=200, url="", in_stock=True), # First in stock
-        Product(title="Product C", price=300, url="", in_stock=True), # Should not be returned
+        Product(title="Product A", price=100, url="", in_stock=False, seller="seller_A"),
+        Product(title="Product C", price=300, url="", in_stock=True, seller="blacklisted_seller"),
+        Product(title="Product B", price=200, url="", in_stock=True, seller="seller_B"), 
     ]
 
 # --- Unit Tests ---
@@ -96,6 +106,12 @@ def test_parse_stock_status_out_of_stock(ruten_page_scraper, sample_product_page
     in_stock = ruten_page_scraper._parse_stock_status(soup)
     assert in_stock is False
 
+def test_parse_seller_id(ruten_page_scraper, sample_product_page_with_seller_html):
+    """Test parsing seller ID from product page."""
+    soup = BeautifulSoup(sample_product_page_with_seller_html, 'html.parser')
+    seller_id = ruten_page_scraper._parse_seller_id(soup)
+    assert seller_id == "good_seller_id"
+
 def test_keyword_checker(sample_products_for_filtering):
     """Test the keyword checker filters correctly."""
     checker = KeywordChecker()
@@ -113,7 +129,7 @@ def test_stock_checker_found(sample_products_for_stock_check):
     checker = StockChecker()
     product, stats = checker.check(sample_products_for_stock_check, {})
     assert product is not None
-    assert product.title == "Product B"
+    assert product.title == "Product C"
 
 def test_stock_checker_not_found(sample_products_for_stock_check):
     """Test the stock checker returns None when no product is available."""
@@ -135,3 +151,15 @@ def test_stock_checker_price_rejection(sample_products_for_stock_check):
     assert len(stats['rejected_due_to_price']) == 2
     assert "Product B" in stats['rejected_due_to_price']
     assert "Product C" in stats['rejected_due_to_price']
+
+def test_stock_checker_seller_rejection(sample_products_for_stock_check):
+    """Test the stock checker rejects an item if the seller is blacklisted."""
+    checker = StockChecker()
+    params = {'blacklisted_sellers': ['blacklisted_seller']}
+    # We expect Product B to be found, as Product C's seller is blacklisted
+    product, stats = checker.check(sample_products_for_stock_check, params)
+    
+    assert product is not None
+    assert product.title == "Product B"
+    assert len(stats['rejected_due_to_seller']) == 1
+    assert stats['rejected_due_to_seller'][0] == "Product C"

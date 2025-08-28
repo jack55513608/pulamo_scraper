@@ -11,6 +11,11 @@ MAX_RETRIES = 10
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+# --- Blacklist ---
+BLACKLISTED_SELLERS = [
+    'lana20110406',
+]
+
 # --- Task Definitions ---
 TASKS = [
     {
@@ -68,6 +73,7 @@ TASKS = [
         'stock_checker': 'stock.StockChecker',
         'stock_checker_params': {
             'max_price': 2000,
+            'blacklisted_sellers': BLACKLISTED_SELLERS,
         },
         'notifier': 'telegram.TelegramNotifier',
         'notifier_params': {

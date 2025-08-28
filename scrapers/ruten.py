@@ -93,13 +93,13 @@ class RutenSearchScraper(BaseScraper):
 class RutenProductPageScraper(BaseScraper):
     """
     Scrapes individual Ruten product pages to get detailed information, 
-    especially stock status.
+    especially stock status and seller ID.
     """
 
     def scrape(self, products: List[Product]) -> Tuple[List[Product], Dict[str, Any]]:
         """
         Receives a list of products, visits each URL, and updates them
-        with stock information.
+        with stock and seller information.
         """
         stats = {
             'total_processed': len(products),
@@ -121,8 +121,10 @@ class RutenProductPageScraper(BaseScraper):
                 )
                 soup = BeautifulSoup(self.driver.page_source, 'html.parser')
                 
-                # Update product with stock info
+                # Update product with stock info and seller
                 product.in_stock = self._parse_stock_status(soup)
+                product.seller = self._parse_seller_id(soup)
+
                 if not product.in_stock:
                     stats['out_of_stock_after_scrape'].append(product.title)
                 updated_products.append(product)
@@ -158,3 +160,31 @@ class RutenProductPageScraper(BaseScraper):
         # assume it's in stock as a reasonable default.
         logging.warning("Could not determine stock status from meta tag or button, assuming in stock.")
         return True
+
+    def _parse_seller_id(self, soup: BeautifulSoup) -> Optional[str]:
+        """Parses the soup of a product page to find the seller's ID."""
+        try:
+            # Find the link to the seller's store profile
+            # The link contains '/store/[seller_id]'
+            seller_link = soup.find('a', href=re.compile(r'/store/'))
+            if seller_link and seller_link.get('href'):
+                href = seller_link['href']
+                seller_id = href.split('/')[-1]
+                logging.info(f"Found seller ID: {seller_id}")
+                return seller_id
+            
+            # Fallback: Try to find it in the script context
+            scripts = soup.find_all('script', type='text/javascript')
+            for script in scripts:
+                if script.string and 'RT.context' in script.string:
+                    match = re.search(r'"nick":"(.*?)"', script.string)
+                    if match:
+                        seller_id = match.group(1)
+                        logging.info(f"Found seller ID from script context: {seller_id}")
+                        return seller_id
+
+            logging.warning("Could not find seller ID on the page.")
+            return None
+        except Exception as e:
+            logging.error(f"Error parsing seller ID: {e}", exc_info=True)
+            return None

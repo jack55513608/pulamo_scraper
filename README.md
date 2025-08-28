@@ -100,6 +100,9 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
     },
     'page_scraper': 'ruten.RutenProductPageScraper',
     'stock_checker': 'stock.StockChecker',
+    'stock_checker_params': {
+        'max_price': 2000,
+    },
     'notifier': 'telegram.TelegramNotifier',
     'notifier_params': {
         'name': 'MGSD 命運鋼彈',
@@ -214,9 +217,9 @@ docker-compose -f docker-compose.test.yml down
 
 預期結果範例 (若商品未上架):
 ```
---- 開始檢查商品狀態 (測試案例) ---
-未找到符合條件的 獵魔鋼彈 (測試案例) 已售完或未上架
---- 商品狀態檢查結束 (測試案例) ---
+INFO - --- 開始檢查商品狀態 (測試案例) ---
+INFO - 未找到符合條件的 獵魔鋼彈 (測試案例) 已售完或未上架
+INFO - --- 商品狀態檢查結束 (測試案例) ---
 ```
 
 ---
@@ -253,3 +256,18 @@ docker-compose -f docker-compose.test.yml down
     - `test_ruten_unit.py`: 針對 Ruten 爬蟲的單元測試。
     - `test_factory.py`: 針對工廠模式的單元測試。
 - `README.md`: 本說明文件。
+
+---
+
+## 6. 日誌 (Logging)
+
+本專案的日誌系統經過簡化，以更好地與 Docker 整合。
+
+- **應用程式日誌**: 程式本身產生的日誌只包含**日誌等級**和**訊息** (例如 `INFO - --- 開始新一輪檢查 ---`)。
+- **時間戳**: 所有日誌的時間戳都由 Docker 的日誌驅動程式統一提供，以確保在多個服務中格式一致。
+
+當您使用 `docker-compose logs` 查看日誌時，會看到如下格式：
+
+```
+scraper  | YYYY-MM-DDTHH:MM:SS.sssssssssZ INFO - --- 開始新一輪檢查 ---
+```

@@ -1,6 +1,5 @@
 
 # logger_config.py
-
 import logging
 import sys
 
@@ -12,10 +11,9 @@ def setup_logger(level=logging.INFO):
     logger = logging.getLogger()
     logger.setLevel(level)  # Set the minimum level of logs to capture
 
-    # Create a formatter
+    # Create a formatter (without timestamp, as Docker provides it)
     formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        '%(levelname)s - %(message)s'
     )
 
     # Create a handler for console output (stdout)

@@ -33,7 +33,6 @@ class RutenSearchScraper(BaseScraper):
 
         for attempt in range(getattr(config, 'MAX_RETRIES', 10)):
             try:
-                logging.info(f"Scraping URL: {url} (Attempt {attempt + 1}/{getattr(config, 'MAX_RETRIES', 10)})")
                 self.driver.get(url)
                 WebDriverWait(self.driver, 20).until(
                     EC.presence_of_element_located((By.CLASS_NAME, "product-item"))
@@ -48,9 +47,7 @@ class RutenSearchScraper(BaseScraper):
                     return []
 
         soup = BeautifulSoup(self.driver.page_source, 'html.parser')
-        logging.info("Searching for product items with class 'product-item'...")
         product_items = soup.find_all('div', class_='product-item')
-        logging.info(f"Found {len(product_items)} product items.")
 
         if not product_items:
             with open(f"/tmp/ruten_page_source_{time.time()}.html", "w") as f:

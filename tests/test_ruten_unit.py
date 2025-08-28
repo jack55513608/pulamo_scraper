@@ -103,17 +103,17 @@ def test_keyword_checker(sample_products_for_filtering):
         'keywords': ['mgsd', '命運鋼彈'],
         'exclude_keywords': ['ps5']
     }
-    result = checker.check(sample_products_for_filtering, params)
-    assert len(result) == 2
-    assert result[0].title == "MGSD 命運鋼彈"
-    assert result[1].title == "[預購] MGSD 命運鋼彈"
+    filtered_products, stats = checker.check(sample_products_for_filtering, params)
+    assert len(filtered_products) == 2
+    assert filtered_products[0].title == "MGSD 命運鋼彈"
+    assert filtered_products[1].title == "[預購] MGSD 命運鋼彈"
 
 def test_stock_checker_found(sample_products_for_stock_check):
     """Test the stock checker finds the first available product."""
     checker = StockChecker()
-    result = checker.check(sample_products_for_stock_check, {})
-    assert result is not None
-    assert result.title == "Product B"
+    product, stats = checker.check(sample_products_for_stock_check, {})
+    assert product is not None
+    assert product.title == "Product B"
 
 def test_stock_checker_not_found(sample_products_for_stock_check):
     """Test the stock checker returns None when no product is available."""
@@ -121,3 +121,17 @@ def test_stock_checker_not_found(sample_products_for_stock_check):
     all_out_of_stock = [p for p in sample_products_for_stock_check if not p.in_stock]
     product, _ = checker.check(all_out_of_stock, {})
     assert product is None
+
+def test_stock_checker_price_rejection(sample_products_for_stock_check):
+    """Test the stock checker rejects items if their price is too high."""
+    checker = StockChecker()
+    params = {'max_price': 150}
+    product, stats = checker.check(sample_products_for_stock_check, params)
+    
+    # All in-stock products (B and C) are over the max_price, so none should be found.
+    assert product is None 
+    
+    # Both B and C should be rejected due to price.
+    assert len(stats['rejected_due_to_price']) == 2
+    assert "Product B" in stats['rejected_due_to_price']
+    assert "Product C" in stats['rejected_due_to_price']

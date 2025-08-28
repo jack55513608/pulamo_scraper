@@ -48,6 +48,7 @@ async def process_ruten_task(task: dict):
         'pages_scraped': 0,
         'pages_failed': 0,
         'out_of_stock': 0,
+        'rejected_due_to_price': 0,
     }
 
     try:
@@ -81,6 +82,7 @@ async def process_ruten_task(task: dict):
         stock_checker = get_checker(task['stock_checker'])
         found_product, stock_stats = stock_checker.check(detailed_products, task.get('stock_checker_params', {}))
         stats['out_of_stock'] = len(stock_stats['out_of_stock_titles'])
+        stats['rejected_due_to_price'] = len(stock_stats.get('rejected_due_to_price', []))
 
         # Step 5: Notify if a product is found
         if found_product:
@@ -93,12 +95,14 @@ async def process_ruten_task(task: dict):
     except Exception as e:
         logging.error(f"在處理任務 '{task_name}' 時發生錯誤: {e}", exc_info=True)
     finally:
-        logging.info(f"Ruten任務總結: 搜尋到 {stats['total_searched']} 件商品。"
-                     f"因關鍵字不符被過濾 {stats['keyword_mismatch']} 件。"
-                     f"因排除關鍵字被過濾 {stats['excluded_keyword']} 件。"
-                     f"成功抓取 {stats['pages_scraped']} 件商品頁面。"
-                     f"其中 {stats['pages_failed']} 件抓取失敗。"
-                     f"最終 {stats['out_of_stock']} 件商品皆無庫存。")
+        summary = (
+            f"Ruten任務總結: 搜尋到 {stats['total_searched']} 件商品. "
+            f"關鍵字過濾掉 {stats['keyword_mismatch'] + stats['excluded_keyword']} 件. "
+            f"成功抓取 {stats['pages_scraped']} 個頁面 ({stats['pages_failed']} 失敗). "
+            f"最終, {stats['rejected_due_to_price']} 件因價格過高被跳過, "
+            f"{stats['out_of_stock']} 件無庫存."
+        )
+        logging.info(summary)
 
 
 async def main():

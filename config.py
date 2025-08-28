@@ -66,6 +66,9 @@ TASKS = [
         },
         'page_scraper': 'ruten.RutenProductPageScraper',
         'stock_checker': 'stock.StockChecker',
+        'stock_checker_params': {
+            'max_price': 2000,
+        },
         'notifier': 'telegram.TelegramNotifier',
         'notifier_params': {
             'name': 'MGSD 命運鋼彈',

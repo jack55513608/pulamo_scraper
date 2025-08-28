@@ -84,6 +84,9 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
 ```
 
 **多步驟任務 (例如 Ruten):**
+
+您也可以在 `config.py` 中定義 `BLACKLISTED_SELLERS` 列表，來過濾掉特定賣家的商品 (此功能目前僅支援 Ruten)。
+
 ```python
 # config.py
 {
@@ -102,6 +105,7 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
     'stock_checker': 'stock.StockChecker',
     'stock_checker_params': {
         'max_price': 2000,
+        'blacklisted_sellers': ['seller_id_to_block_1', 'seller_id_to_block_2'],
     },
     'notifier': 'telegram.TelegramNotifier',
     'notifier_params': {

@@ -51,7 +51,6 @@ async def process_ruten_task(task: dict):
     }
 
     try:
-        logging.info("Step 1: Scraping search result page...")
         # Step 1: Scrape the search result page
         search_scraper = get_scraper(task['search_scraper'], config.SELENIUM_GRID_URL)
         with search_scraper:
@@ -61,7 +60,6 @@ async def process_ruten_task(task: dict):
         if not all_products:
             return
 
-        logging.info("Step 2: Filtering by keywords...")
         # Step 2: Filter by keywords
         keyword_checker = get_checker(task['keyword_checker'])
         filtered_products, keyword_stats = keyword_checker.check(all_products, task['keyword_checker_params'])
@@ -71,7 +69,6 @@ async def process_ruten_task(task: dict):
         if not filtered_products:
             return
 
-        logging.info("Step 3: Scraping product pages for stock info...")
         # Step 3: Scrape product pages for stock info (sequential)
         page_scraper = get_scraper(task['page_scraper'], config.SELENIUM_GRID_URL)
         with page_scraper:
@@ -80,13 +77,11 @@ async def process_ruten_task(task: dict):
         stats['pages_failed'] = len(page_scrape_stats['failed_to_scrape'])
 
 
-        logging.info("Step 4: Checking for stock...")
         # Step 4: Check for stock
         stock_checker = get_checker(task['stock_checker'])
         found_product, stock_stats = stock_checker.check(detailed_products, task.get('stock_checker_params', {}))
         stats['out_of_stock'] = len(stock_stats['out_of_stock_titles'])
 
-        logging.info("Step 5: Notifying if a product is found...")
         # Step 5: Notify if a product is found
         if found_product:
             logging.info(f"在任務 '{task_name}' 中找到目標商品: {found_product.title}")

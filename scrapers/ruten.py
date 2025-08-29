@@ -37,6 +37,16 @@ class RutenSearchScraper(BaseScraper):
                 WebDriverWait(self.driver, 20).until(
                     EC.presence_of_element_located((By.CLASS_NAME, "product-item"))
                 )
+
+                # Get scroll height
+                last_height = self.driver.execute_script("return document.body.scrollHeight")
+
+                # Number of times to scroll
+                for i in range(2):
+                    # Scroll down by a fraction of the page height
+                    self.driver.execute_script(f"window.scrollBy(0, {last_height/2});")
+                    time.sleep(3)
+
                 break
             except TimeoutException:
                 if attempt < getattr(config, 'MAX_RETRIES', 10) - 1:

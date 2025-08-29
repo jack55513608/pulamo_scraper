@@ -51,8 +51,6 @@ def dump_html(url: str):
     try:
         driver.get(url)
         time.sleep(5) # Wait for dynamic content to load
-        driver.set_page_load_timeout(120)
-        driver.implicitly_wait(10)
         logging.info("頁面載入成功，正在輸出 HTML 內容...")
         # Print the page source to standard output
         print(driver.page_source)

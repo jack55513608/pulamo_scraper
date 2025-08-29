@@ -226,6 +226,15 @@ INFO - 未找到符合條件的 獵魔鋼彈 (測試案例) 已售完或未上�
 INFO - --- 商品狀態檢查結束 (測試案例) ---
 ```
 
+#### 露天拍賣功能測試
+
+此測試用於驗證 `RutenSearchScraper` 是否能正確抓取露天拍賣搜尋頁面上的所有商品。
+
+```bash
+# 在 Docker 容器內部執行露天拍賣功能測試
+docker-compose run --rm scraper pytest -m docker tests/test_ruten_functional.py
+```
+
 ---
 
 ## 5. 專案結構

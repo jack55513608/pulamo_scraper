@@ -11,11 +11,14 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
+# 設定工作目錄
+WORKDIR /app
+
+# 複製我們的爬蟲腳本
+COPY . .
+
 # 切換回非 root 使用者
 USER seluser
-
-# 設定工作目錄
-WORKDIR /home/seluser
 
 # 複製依賴文件並安裝
 # 使用 --chown 來確保 seluser 擁有這些檔案

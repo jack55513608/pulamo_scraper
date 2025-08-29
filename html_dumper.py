@@ -1,4 +1,3 @@
-# html_dumper.py
 import sys
 import logging
 import time
@@ -6,6 +5,11 @@ from selenium import webdriver
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.chrome.options import Options
 import config
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from bs4 import BeautifulSoup
+import os
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -50,10 +54,16 @@ def dump_html(url: str):
 
     try:
         driver.get(url)
-        time.sleep(5) # Wait for dynamic content to load
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "rt-product-card"))
+        )
         logging.info("頁面載入成功，正在輸出 HTML 內容...")
-        # Print the page source to standard output
-        print(driver.page_source)
+        soup = BeautifulSoup(driver.page_source, "html.parser")
+        product_links = soup.find_all("a", class_="rt-product-card-name-wrap")
+        if product_links:
+            print(product_links[2]["href"])
+        else:
+            logging.warning("沒有找到任何商品連結。")
         logging.info("HTML 內容輸出完畢。")
     except Exception as e:
         logging.error(f"抓取頁面時發生錯誤: {e}", exc_info=True)

@@ -76,8 +76,9 @@ def sample_products_for_filtering():
 def sample_products_for_stock_check():
     return [
         Product(title="Product A", price=100, url="", in_stock=False, seller="seller_A"),
+        Product(title="Product B", price=200, url="", in_stock=True, seller="seller_B"),
         Product(title="Product C", price=300, url="", in_stock=True, seller="blacklisted_seller"),
-        Product(title="Product B", price=200, url="", in_stock=True, seller="seller_B"), 
+        Product(title="Product D", price=50, url="", in_stock=True, seller="seller_D"),
     ]
 
 # --- Unit Tests ---
@@ -124,28 +125,34 @@ def test_keyword_checker(sample_products_for_filtering):
     assert filtered_products[0].title == "MGSD 命運鋼彈"
     assert filtered_products[1].title == "[預購] MGSD 命運鋼彈"
 
-def test_stock_checker_found(sample_products_for_stock_check):
-    """Test the stock checker finds the first available product."""
+def test_stock_checker_found_all_valid(sample_products_for_stock_check):
+    """Test the stock checker finds all available products when no filters are applied."""
     checker = StockChecker()
-    product, stats = checker.check(sample_products_for_stock_check, {})
-    assert product is not None
-    assert product.title == "Product C"
+    products, stats = checker.check(sample_products_for_stock_check, {})
+    
+    assert len(products) == 3
+    found_titles = [p.title for p in products]
+    assert "Product B" in found_titles
+    assert "Product C" in found_titles
+    assert "Product D" in found_titles
+    assert len(stats['out_of_stock_titles']) == 1
 
 def test_stock_checker_not_found(sample_products_for_stock_check):
-    """Test the stock checker returns None when no product is available."""
+    """Test the stock checker returns an empty list when no product is available."""
     checker = StockChecker()
     all_out_of_stock = [p for p in sample_products_for_stock_check if not p.in_stock]
-    product, _ = checker.check(all_out_of_stock, {})
-    assert product is None
+    products, _ = checker.check(all_out_of_stock, {})
+    assert products == []
 
 def test_stock_checker_price_rejection(sample_products_for_stock_check):
     """Test the stock checker rejects items if their price is too high."""
     checker = StockChecker()
     params = {'max_price': 150}
-    product, stats = checker.check(sample_products_for_stock_check, params)
+    products, stats = checker.check(sample_products_for_stock_check, params)
     
-    # All in-stock products (B and C) are over the max_price, so none should be found.
-    assert product is None 
+    # Only Product D (price 50) should be found.
+    assert len(products) == 1
+    assert products[0].title == "Product D"
     
     # Both B and C should be rejected due to price.
     assert len(stats['rejected_due_to_price']) == 2
@@ -156,10 +163,13 @@ def test_stock_checker_seller_rejection(sample_products_for_stock_check):
     """Test the stock checker rejects an item if the seller is blacklisted."""
     checker = StockChecker()
     params = {'blacklisted_sellers': ['blacklisted_seller']}
-    # We expect Product B to be found, as Product C's seller is blacklisted
-    product, stats = checker.check(sample_products_for_stock_check, params)
+    # We expect Product B and D to be found, as Product C's seller is blacklisted
+    products, stats = checker.check(sample_products_for_stock_check, params)
     
-    assert product is not None
-    assert product.title == "Product B"
+    assert len(products) == 2
+    found_titles = [p.title for p in products]
+    assert "Product B" in found_titles
+    assert "Product D" in found_titles
+
     assert len(stats['rejected_due_to_seller']) == 1
     assert stats['rejected_due_to_seller'][0] == "Product C"

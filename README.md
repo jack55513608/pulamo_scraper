@@ -2,7 +2,7 @@
 
 ## 1. 專案目標
 
-本專案旨在監控 [弘德模型 (Pulamo)](https://www.pulamo.com.tw/) 及 [露天拍賣 (Ruten)](https://www.ruten.com.tw/) 網站，自動化地檢查特定商品的庫存狀態。
+本專案旨在監控 [弘德模型 (Pulamo)](https://www.pulamo.com.tw/) 及 [露天拍賣 (Ruten)](https://www.ruten.com.tw/) 網站，自動化地檢查特定商品的庫存狀態。在一次檢查週期中，若找到多個符合條件的商品，系統會對所有商品逐一發出通知。
 
 目前監控的目標商品為：
 1.  **MGSD 飛翼鋼彈**: 監控模型本體是否有貨。
@@ -253,6 +253,7 @@ INFO - --- 商品狀態檢查結束 (測試案例) ---
 - `Dockerfile`: 建立 Python 應用程式 Docker 映像檔的說明書。
 - `requirements.txt`: Python 依賴套件列表。
 - `tests/`: 存放所有單元測試和功能測試檔案。
+    - `api_test.py`: 臨時的 API 測試腳本。
     - `test_checker.py`: 針對商品檢查邏輯的單元測試。
     - `test_notifier.py`: 針對通知模組的單元測試。
     - `test_scrapers_pulamo.py`: 針對 Pulamo 爬蟲的功能測試。

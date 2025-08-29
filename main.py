@@ -23,11 +23,16 @@ async def process_simple_task(task: dict):
                 logging.info(f"任務 '{task_name}' 的爬蟲未在頁面上找到任何商品。")
                 return
 
-            found_product = checker.check(products, task['checker_params'])
+            found_products = checker.check(products, task['checker_params'])
 
-            if found_product:
-                logging.info(f"在任務 '{task_name}' 中找到目標商品: {found_product.title}")
-                await notifier.notify(found_product, task['notifier_params'])
+            if found_products:
+                logging.info(f"在任務 '{task_name}' 中找到 {len(found_products)} 件目標商品。")
+                # Concurrently notify for all found products
+                notification_tasks = [
+                    notifier.notify(product, task['notifier_params'])
+                    for product in found_products
+                ]
+                await asyncio.gather(*notification_tasks)
             else:
                 logging.info(f"任務 '{task_name}' 找到了 {len(products)} 件商品，但沒有任何一件符合篩選條件。")
 
@@ -81,16 +86,20 @@ async def process_ruten_task(task: dict):
 
         # Step 4: Check for stock
         stock_checker = get_checker(task['stock_checker'])
-        found_product, stock_stats = stock_checker.check(detailed_products, task.get('stock_checker_params', {}))
+        found_products, stock_stats = stock_checker.check(detailed_products, task.get('stock_checker_params', {}))
         stats['out_of_stock'] = len(stock_stats['out_of_stock_titles'])
         stats['rejected_due_to_price'] = len(stock_stats.get('rejected_due_to_price', []))
         stats['rejected_due_to_seller'] = len(stock_stats.get('rejected_due_to_seller', []))
 
-        # Step 5: Notify if a product is found
-        if found_product:
-            logging.info(f"在任務 '{task_name}' 中找到目標商品: {found_product.title}")
+        # Step 5: Notify if any products are found
+        if found_products:
+            logging.info(f"在任務 '{task_name}' 中找到 {len(found_products)} 件目標商品。")
             notifier = get_notifier(task['notifier'])
-            await notifier.notify(found_product, task['notifier_params'])
+            notification_tasks = [
+                notifier.notify(product, task['notifier_params'])
+                for product in found_products
+            ]
+            await asyncio.gather(*notification_tasks)
         else:
             logging.info(f"未找到符合條件且有庫存的商品。")
 

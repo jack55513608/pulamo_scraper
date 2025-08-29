@@ -7,9 +7,9 @@ from checkers.base import BaseChecker
 class ProductChecker(BaseChecker):
     """Checks for a product based on keywords and price."""
 
-    def check(self, products: List[Product], params: dict) -> Optional[Product]:
+    def check(self, products: List[Product], params: dict) -> List[Product]:
         """
-        Finds a product that matches the given specification.
+        Finds all products that match the given specification.
         """
         keywords = params.get("keywords", [])
         exclude_keywords = params.get("exclude_keywords", [])
@@ -18,6 +18,7 @@ class ProductChecker(BaseChecker):
         logging.info(f"ProductChecker: 開始用 {params} 篩選 {len(products)} 件商品...")
 
         reasons = {'keyword': [], 'excluded': [], 'price': [], 'stock': []}
+        found_products = []
 
         for product in products:
             title_lower = product.title.lower()
@@ -36,18 +37,18 @@ class ProductChecker(BaseChecker):
 
             if product.in_stock:
                 logging.info(f"ProductChecker: 找到符合條件且有庫存的商品: {product.title}")
-                return product
+                found_products.append(product)
             else:
                 reasons['stock'].append(product.title)
         
-        # Log summary if no product was found
-        logging.info(
-            f"ProductChecker: 未找到符合條件的商品。分析結果: "
-            f"{len(reasons['keyword'])} 件因關鍵字不符, "
-            f"{len(reasons['excluded'])} 件因排除關鍵字, "
-            f"{len(reasons['price'])} 件因價格不符, "
-            f"{len(reasons['stock'])} 件因無庫存。"
-        )
-        logging.debug(f"被過濾的商品詳情: {reasons}")
+        if not found_products:
+            logging.info(
+                f"ProductChecker: 未找到符合條件的商品。分析結果: "
+                f"{len(reasons['keyword'])} 件因關鍵字不符, "
+                f"{len(reasons['excluded'])} 件因排除關鍵字, "
+                f"{len(reasons['price'])} 件因價格不符, "
+                f"{len(reasons['stock'])} 件因無庫存。"
+            )
+            logging.debug(f"被過濾的商品詳情: {reasons}")
 
-        return None
+        return found_products

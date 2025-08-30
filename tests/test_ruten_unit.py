@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from models import Product
 from scrapers.ruten import RutenSearchScraper, RutenProductPageScraper
 from checkers.keyword import KeywordChecker
-from checkers.stock import StockChecker
+from checkers.stock import StockChecker, PaymentMethod
 
 # --- Test Data ---
 @pytest.fixture
@@ -63,6 +63,23 @@ def sample_product_page_with_seller_html():
     """
 
 @pytest.fixture
+def sample_product_page_with_payment_methods_html():
+    return '''
+    <table>
+        <tr>
+            <td class="title">付款方式：</td>
+            <td>
+                <ul class="detail-list">
+                    <li class="PW_SEVEN_COD">7-11取貨付款</li>
+                    <li class="PW_FAMILY_COD">全家取貨付款</li>
+                    <li>面交取貨付款</li>
+                </ul>
+            </td>
+        </tr>
+    </table>
+    '''
+
+@pytest.fixture
 def sample_products_for_filtering():
     return [
         Product(title="MGSD 命運鋼彈", price=1300, url="", in_stock=False),
@@ -79,6 +96,15 @@ def sample_products_for_stock_check():
         Product(title="Product B", price=200, url="", in_stock=True, seller="seller_B"),
         Product(title="Product C", price=300, url="", in_stock=True, seller="blacklisted_seller"),
         Product(title="Product D", price=50, url="", in_stock=True, seller="seller_D"),
+    ]
+
+@pytest.fixture
+def sample_products_for_payment_check():
+    return [
+        Product(title="Product A", price=100, in_stock=True, seller="seller_A", url="http://example.com/a", payment_methods=['PW_SEVEN_COD']),
+        Product(title="Product B", price=200, in_stock=True, seller="seller_B", url="http://example.com/b", payment_methods=['PW_FAMILY_COD']),
+        Product(title="Product C", price=300, in_stock=True, seller="seller_C", url="http://example.com/c", payment_methods=['PChomePay支付連 信用卡']),
+        Product(title="Product D", price=400, in_stock=True, seller="seller_D", url="http://example.com/d", payment_methods=['PW_SEVEN_COD', 'PChomePay支付連 信用卡']),
     ]
 
 # --- Unit Tests ---
@@ -112,6 +138,15 @@ def test_parse_seller_id(ruten_page_scraper, sample_product_page_with_seller_htm
     soup = BeautifulSoup(sample_product_page_with_seller_html, 'html.parser')
     seller_id = ruten_page_scraper._parse_seller_id(soup)
     assert seller_id == "good_seller_id"
+
+def test_parse_payment_methods(ruten_page_scraper, sample_product_page_with_payment_methods_html):
+    """Test parsing payment methods from product page."""
+    soup = BeautifulSoup(sample_product_page_with_payment_methods_html, 'html.parser')
+    payment_methods = ruten_page_scraper._parse_payment_methods(soup)
+    assert len(payment_methods) == 3
+    assert "PW_SEVEN_COD" in payment_methods
+    assert "PW_FAMILY_COD" in payment_methods
+    assert "面交取貨付款" in payment_methods
 
 def test_keyword_checker(sample_products_for_filtering):
     """Test the keyword checker filters correctly."""
@@ -173,3 +208,39 @@ def test_stock_checker_seller_rejection(sample_products_for_stock_check):
 
     assert len(stats['rejected_due_to_seller']) == 1
     assert stats['rejected_due_to_seller'][0] == "Product C"
+
+def test_stock_checker_payment_method_rejection(sample_products_for_payment_check):
+    """Test that the checker rejects products with unacceptable payment methods."""
+    checker = StockChecker()
+    params = {
+        "acceptable_payment_methods": [PaymentMethod.SEVEN_ELEVEN_COD]
+    }
+    found_products, stats = checker.check(sample_products_for_payment_check, params)
+    assert len(found_products) == 2
+    assert "Product A" in [p.title for p in found_products]
+    assert "Product D" in [p.title for p in found_products]
+    assert len(stats["rejected_due_to_payment_method"]) == 2
+    assert "Product B" in stats["rejected_due_to_payment_method"]
+    assert "Product C" in stats["rejected_due_to_payment_method"]
+
+def test_stock_checker_payment_method_acceptance(sample_products_for_payment_check):
+    """Test that the checker accepts products with acceptable payment methods."""
+    checker = StockChecker()
+    params = {
+        "acceptable_payment_methods": [PaymentMethod.SEVEN_ELEVEN_COD, PaymentMethod.FAMILY_MART_COD]
+    }
+    found_products, stats = checker.check(sample_products_for_payment_check, params)
+    assert len(found_products) == 3
+    assert "Product A" in [p.title for p in found_products]
+    assert "Product B" in [p.title for p in found_products]
+    assert "Product D" in [p.title for p in found_products]
+    assert len(stats["rejected_due_to_payment_method"]) == 1
+    assert "Product C" in stats["rejected_due_to_payment_method"]
+
+def test_stock_checker_no_payment_method_filter(sample_products_for_payment_check):
+    """Test that the checker does not filter by payment method if no acceptable payment methods are provided."""
+    checker = StockChecker()
+    params = {}
+    found_products, stats = checker.check(sample_products_for_payment_check, params)
+    assert len(found_products) == 4
+    assert len(stats["rejected_due_to_payment_method"]) == 0

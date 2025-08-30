@@ -131,9 +131,10 @@ class RutenProductPageScraper(BaseScraper):
                 )
                 soup = BeautifulSoup(self.driver.page_source, 'html.parser')
                 
-                # Update product with stock info and seller
+                # Update product with stock info, seller and payment methods
                 product.in_stock = self._parse_stock_status(soup)
                 product.seller = self._parse_seller_id(soup)
+                product.payment_methods = self._parse_payment_methods(soup)
 
                 if not product.in_stock:
                     stats['out_of_stock_after_scrape'].append(product.title)
@@ -198,3 +199,20 @@ class RutenProductPageScraper(BaseScraper):
         except Exception as e:
             logging.error(f"Error parsing seller ID: {e}", exc_info=True)
             return None
+
+    def _parse_payment_methods(self, soup: BeautifulSoup) -> List[str]:
+        """Parses the soup of a product page to find available payment methods."""
+        payment_methods = []
+        payment_section = soup.find('td', class_='title', string='付款方式：')
+        if payment_section:
+            payment_list = payment_section.find_next_sibling('td').find('ul', class_='detail-list')
+            if payment_list:
+                for item in payment_list.find_all('li'):
+                    # Extract the class name that starts with 'PW_'
+                    pw_class = next((c for c in item.get('class', []) if c.startswith('PW_')), None)
+                    if pw_class:
+                        payment_methods.append(pw_class)
+                    else:
+                        # Fallback to text if no PW_ class is found (e.g., for "面交取貨付款")
+                        payment_methods.append(item.text.strip())
+        return payment_methods

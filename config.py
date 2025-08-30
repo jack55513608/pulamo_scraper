@@ -1,5 +1,6 @@
 # config.py
 import os
+from checkers.stock import PaymentMethod
 
 # --- General Settings ---
 SELENIUM_GRID_URL = "http://selenium:4444/wd/hub"
@@ -74,6 +75,11 @@ TASKS = [
         'stock_checker_params': {
             'max_price': 2000,
             'blacklisted_sellers': BLACKLISTED_SELLERS,
+            'acceptable_payment_methods': [
+                PaymentMethod.SEVEN_ELEVEN_COD,
+                PaymentMethod.FAMILY_MART_COD,
+                PaymentMethod.HILIFE_COD,
+            ],
         },
         'notifier': 'telegram.TelegramNotifier',
         'notifier_params': {

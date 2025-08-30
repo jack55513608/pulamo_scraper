@@ -90,6 +90,8 @@ async def process_ruten_task(task: dict):
         stats['out_of_stock'] = len(stock_stats['out_of_stock_titles'])
         stats['rejected_due_to_price'] = len(stock_stats.get('rejected_due_to_price', []))
         stats['rejected_due_to_seller'] = len(stock_stats.get('rejected_due_to_seller', []))
+        stats['rejected_due_to_payment_method'] = len(stock_stats.get('rejected_due_to_payment_method', []))
+
 
         # Step 5: Notify if any products are found
         if found_products:
@@ -112,7 +114,8 @@ async def process_ruten_task(task: dict):
             f"成功抓取 {stats['pages_scraped']} 個頁面 ({stats['pages_failed']} 失敗). "
             f"最終, {stats['rejected_due_to_price']} 件因價格過高, "
             f"{stats['rejected_due_to_seller']} 件因賣家黑名單, "
-            f"{stats['out_of_stock']} 件無庫存."
+            f"{stats['out_of_stock']} 件無庫存, "
+            f"{stats['rejected_due_to_payment_method']} 件因付款方式不符."
         )
         logging.info(summary)
 

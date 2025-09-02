@@ -1,6 +1,7 @@
 # checkers/stock.py
 import logging
 from typing import Any, Dict, List, Optional, Tuple
+
 from models import Product
 from checkers.base import BaseChecker
 from enum import Enum

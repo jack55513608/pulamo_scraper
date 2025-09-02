@@ -10,9 +10,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-import config
+
 from models import Product
 from scrapers.base import BaseScraper
+from task_config_manager import task_config_manager
 
 
 class RutenSearchScraper(BaseScraper):
@@ -106,11 +107,12 @@ class RutenProductPageScraper(BaseScraper):
     especially stock status and seller ID.
     """
 
-    def scrape(self, products: List[Product]) -> Tuple[List[Product], Dict[str, Any]]:
+    def scrape(self, products: List[Product], params: dict) -> Tuple[List[Product], Dict[str, Any]]:
         """
         Receives a list of products, visits each URL, and updates them
         with stock and seller information.
         """
+        blacklisted_sellers = params.get('blacklisted_sellers', [])
         stats = {
             'total_processed': len(products),
             'failed_to_scrape': [],
@@ -135,6 +137,10 @@ class RutenProductPageScraper(BaseScraper):
                 product.in_stock = self._parse_stock_status(soup)
                 product.seller = self._parse_seller_id(soup)
                 product.payment_methods = self._parse_payment_methods(soup)
+
+                if product.seller and product.seller in blacklisted_sellers:
+                    logging.info(f"Product '{product.title}' seller '{product.seller}' is blacklisted, skipping.")
+                    product.in_stock = False
 
                 if not product.in_stock:
                     stats['out_of_stock_after_scrape'].append(product.title)

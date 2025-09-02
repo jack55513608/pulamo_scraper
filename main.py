@@ -4,6 +4,7 @@ import logging
 import config
 from logger_config import setup_logger
 from factory import get_scraper, get_checker, get_notifier
+from task_config_manager import task_config_manager
 
 async def process_simple_task(task: dict):
     """
@@ -79,7 +80,7 @@ async def process_ruten_task(task: dict):
         # Step 3: Scrape product pages for stock info (sequential)
         page_scraper = get_scraper(task['page_scraper'], config.SELENIUM_GRID_URL)
         with page_scraper:
-            detailed_products, page_scrape_stats = page_scraper.scrape(filtered_products)
+            detailed_products, page_scrape_stats = page_scraper.scrape(filtered_products, task.get('stock_checker_params', {}))
         stats['pages_scraped'] = len(detailed_products) - len(page_scrape_stats['failed_to_scrape'])
         stats['pages_failed'] = len(page_scrape_stats['failed_to_scrape'])
 
@@ -131,7 +132,7 @@ async def main():
             logging.info("--- 開始新一輪檢查 ---")
             
             tasks_to_run = []
-            for task in config.TASKS:
+            for task in task_config_manager.get_tasks():
                 task_type = task.get('type', 'simple') # Default to simple
                 if task_type == 'ruten':
                     tasks_to_run.append(process_ruten_task(task))

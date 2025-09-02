@@ -58,17 +58,20 @@ class PulamoScraper(BaseScraper):
         """Parses a single product card to extract its details."""
         try:
             title_element = card.find('div', class_='meepshop-meep-ui__productList-index__productTitle')
-            price_element = card.find('div', style=re.compile(r'font-size:16px;font-weight:700'))
-            
+
+            # New robust way to find price using regex
+            card_text = card.get_text(separator=' ')
+            price_match = re.search(r"NT\$\s*([\d,]+)", card_text)
+
             # If critical elements are missing, return None
-            if not title_element or not price_element:
-                logging.warning("Missing critical elements (title or price) in product card.")
+            if not title_element or not price_match:
+                logging.warning(f"Missing critical elements (title or price) in product card: {card.get_text(strip=True)}")
                 return None
 
             title = title_element.text.strip()
             
-            price_text = price_element.text.strip()
-            price = int(re.sub(r'[^0-9]', '', price_text))
+            # Extract price from regex match
+            price = int(price_match.group(1).replace(',', ''))
 
             sold_out_button = card.find('button', string='已售完', attrs={'disabled': ''})
             in_stock = sold_out_button is None

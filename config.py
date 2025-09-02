@@ -68,7 +68,7 @@ TASKS = [
         'keyword_checker': 'keyword.KeywordChecker',
         'keyword_checker_params': {
             'keywords': ['mgsd', '命運鋼彈'],
-            'exclude_keywords': ['魔物語', 'ps5', 'ns2'] # Exclude game pre-orders
+            'exclude_keywords': ['魔物語', 'ps5', 'ns2', '非'] # Exclude game pre-orders
         },
         'page_scraper': 'ruten.RutenProductPageScraper',
         'stock_checker': 'stock.StockChecker',

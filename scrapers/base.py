@@ -25,6 +25,10 @@ class BaseScraper(ABC):
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_experimental_option("prefs", {
+            "profile.managed_default_content_settings.images": 2,
+            "profile.managed_default_content_settings.stylesheets": 2,
+        })
         chrome_options.add_argument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -36,6 +40,18 @@ class BaseScraper(ABC):
                 driver = webdriver.Remote(
                     command_executor=self.grid_url, options=chrome_options
                 )
+
+                # Block third-party tracking scripts for performance
+                blocked_urls = [
+                    "*://*.google-analytics.com/*",
+                    "*://*.googletagmanager.com/*",
+                    "*://*.facebook.net/*",
+                    "*://*.fbcdn.net/*",
+                    "*://*.connect.facebook.net/*",
+                ]
+                driver.execute_cdp_cmd("Network.setBlockedURLs", {"urls": blocked_urls})
+                driver.execute_cdp_cmd("Network.enable", {})
+
                 return driver
             except Exception as e:
                 if attempt < getattr(config, 'MAX_RETRIES', 10) - 1:

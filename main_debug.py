@@ -3,7 +3,7 @@ import asyncio
 import logging
 import config
 from logger_config import setup_logger
-from main import process_task # Reuse the process_task from main.py
+from main import process_simple_task, process_ruten_task # Reuse the process_task from main.py
 
 async def main():
     """

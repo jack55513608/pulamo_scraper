@@ -3,7 +3,7 @@ import asyncio
 import logging
 import config
 from logger_config import setup_logger
-from main import process_simple_task, process_ruten_task # Reuse the process_task from main.py
+from processors import process_pulamo_task, process_ruten_task
 
 async def main():
     """
@@ -18,8 +18,8 @@ async def main():
             task_type = task.get('type', 'simple') # Default to simple
             if task_type == 'ruten':
                 tasks_to_run.append(process_ruten_task(task))
-            else:
-                tasks_to_run.append(process_simple_task(task))
+            elif task_type == 'pulamo':
+                tasks_to_run.append(process_pulamo_task(task))
         await asyncio.gather(*tasks_to_run)
     except Exception as e:
         logging.critical(f"執行測試任務時發生未預期的錯誤: {e}", exc_info=True)

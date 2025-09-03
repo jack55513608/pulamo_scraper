@@ -59,11 +59,12 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
 
 一個商品的設定規格如下：
 
-**簡單任務 (例如 Pulamo):**
+**Pulamo 任務:**
 ```python
 # config.py
 {
     'name': 'Pulamo - Wing Gundam',
+    'type': 'pulamo',
     'browser': 'chrome', # 可選 'chrome' 或 'firefox'
     'scraper': 'pulamo.PulamoScraper',
     'scraper_params': {
@@ -257,11 +258,15 @@ docker-compose run --rm scraper pytest -m docker tests/test_ruten_functional.py
 
 ## 5. 專案結構
 
-- `main.py`: 主要監控程式的進入點，支援簡單和多步驟的任務類型。
+- `main.py`: 主要監控程式的進入點，負責初始化和執行任務迴圈。
 - `main_debug.py`: 「獵魔鋼彈」測試案例的進入點。
 - `config.py`: 存放所有可變的設定，例如 URL 和商品規格。
 - `models.py`: 定義專案中使用的資料模型，例如 `Product`。
 - `factory.py`: 負責動態載入和實例化各種插件 (Scraper, Checker, Notifier)。
+- `processors/`: 存放所有任務處理邏輯的插件。
+    - `__init__.py`: 將此目錄標記為 Python 套件。
+    - `pulamo.py`: 處理 Pulamo 網站的任務邏輯。
+    - `ruten.py`: 處理露天拍賣網站的任務邏輯，並包含通知冷卻管理器。
 - `scrapers/`: 存放所有網站的爬蟲插件。
     - `base.py`: 爬蟲插件的抽象基礎類別。
     - `pulamo.py`: 針對 Pulamo 網站的爬蟲實作。

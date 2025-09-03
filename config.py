@@ -21,6 +21,7 @@ BLACKLISTED_SELLERS = [
 TASKS = [
     {
         'name': 'Pulamo - Wing Gundam',
+        'type': 'pulamo',
         'browser': 'firefox',
         'scraper': 'pulamo.PulamoScraper',
         'scraper_params': {
@@ -41,6 +42,7 @@ TASKS = [
     },
     {
         'name': 'Pulamo - Destiny Gundam',
+        'type': 'pulamo',
         'browser': 'firefox',
         'scraper': 'pulamo.PulamoScraper',
         'scraper_params': {
@@ -96,7 +98,7 @@ TASKS = [
 TEST_TASKS = [
     {
         'name': 'Pulamo - Barbatos Gundam (Test)',
-        'type': 'simple', # Add type for test tasks
+        'type': 'pulamo', # Add type for test tasks
         'scraper': 'pulamo.PulamoScraper',
         'scraper_params': {
             'search_url': 'https://www.pulamo.com.tw/products?search=MGSD',

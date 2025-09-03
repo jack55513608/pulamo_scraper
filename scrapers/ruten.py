@@ -12,11 +12,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 import config
 from models import Product
-from scrapers.base import BaseScraper
+from scrapers.selenium_scraper import SeleniumScraper
 from task_config_manager import task_config_manager
 
 
-class RutenSearchScraper(BaseScraper):
+class RutenSearchScraper(SeleniumScraper):
     """A scraper for the Ruten search result page."""
 
     def scrape(self, params: dict) -> List[Product]:
@@ -101,7 +101,7 @@ class RutenSearchScraper(BaseScraper):
             logging.warning(f"無法解析商品卡片，HTML 內容: \n{item.prettify()}")
             return None
 
-class RutenProductPageScraper(BaseScraper):
+class RutenProductPageScraper(SeleniumScraper):
     """
     Scrapes individual Ruten product pages to get detailed information, 
     especially stock status and seller ID.

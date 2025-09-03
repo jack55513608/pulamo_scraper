@@ -7,11 +7,11 @@ from bs4 import BeautifulSoup, Tag
 from selenium.common.exceptions import TimeoutException
 import time
 
-from scrapers.base import BaseScraper
+from scrapers.selenium_scraper import SeleniumScraper
 from models import Product
 import config
 
-class PulamoScraper(BaseScraper):
+class PulamoScraper(SeleniumScraper):
     """A scraper for the Pulamo website."""
 
     def scrape(self, params: dict) -> List[Product]:

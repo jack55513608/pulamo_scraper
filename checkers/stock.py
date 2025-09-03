@@ -7,12 +7,10 @@ from checkers.base import BaseChecker
 from enum import Enum
 
 class PaymentMethod(Enum):
-    CREDIT_CARD = "PChomePay支付連 信用卡"
-    BANK_TRANSFER = "銀行或郵局轉帳"
-    SEVEN_ELEVEN_COD = "PW_SEVEN_COD"
-    FAMILY_MART_COD = "PW_FAMILY_COD"
-    HILIFE_COD = "PW_HILIFE_COD"
-    COD = "PW_COD"
+    CREDIT_CARD = "PP_CRD"
+    SEVEN_ELEVEN_COD = "SEVEN_COD"
+    FAMILY_MART_COD = "FAMI_COD"
+    HILIFE_COD = "HILIFE_COD"
 
 class StockChecker(BaseChecker):
     """Checks a list of products and returns all that are in stock and meet the price and seller criteria."""

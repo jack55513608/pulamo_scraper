@@ -1,4 +1,4 @@
-# Pulamo 商品監控爬蟲
+"""# Pulamo 商品監控爬蟲
 
 ## 1. 專案目標
 
@@ -16,6 +16,7 @@
 
 - **Python**: 主要的程式語言。
 - **Selenium & Selenium Grid**: 用於建立分散式的瀏覽器驅動環境，抓取動態加載的網頁內容。
+- **requests**: 用於直接對網站 API 發出 HTTP 請求，實現更高效的資料抓取。
 - **BeautifulSoup4**: 用於解析 HTML，提取所需資訊。
 - **Docker & Docker Compose**: 用於建立一個獨立、可重複的執行環境，簡化部署與執行流程。
 - **Pytest**: 用於執行單元測試。
@@ -87,6 +88,8 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
 
 **多步驟任務 (例如 Ruten):**
 
+露天拍賣的搜尋爬蟲現在使用 **API** 方式，不再需要啟動瀏覽器，大幅提升了效率和穩定性。
+
 您也可以在 `config.py` 中定義 `BLACKLISTED_SELLERS` 列表，來過濾掉特定賣家的商品 (此功能目前僅支援 Ruten)。
 
 ```python
@@ -94,8 +97,9 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
 {
     'name': 'Ruten - Destiny Gundam',
     'type': 'ruten',
-    'browser': 'firefox', # 可選 'chrome' 或 'firefox'
-    'search_scraper': 'ruten.RutenSearchScraper',
+    'browser': 'firefox', # 此瀏覽器僅供後續的 page_scraper 使用
+    # search_scraper 已改用高效的 API 版本
+    'search_scraper': 'ruten_api.RutenSearchAPIScraper',
     'search_scraper_params': {
         'search_url': 'https://www.ruten.com.tw/find/?q=mgsd+%E5%91%BD%E9%81%8B&prc.now=900-1400',
     },
@@ -104,7 +108,7 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
         'keywords': ['mgsd', '命運鋼彈'],
         'exclude_keywords': ['魔物語', 'ps5', 'ns2'] # Exclude game pre-orders
     },
-    'page_scraper': 'ruten.RutenProductPageScraper',
+    'page_scraper': 'ruten_api.RutenProductPageAPIScraper',
     'stock_checker': 'stock.StockChecker',
     'stock_checker_params': {
         'max_price': 2000,
@@ -155,35 +159,42 @@ docker-compose up --scale firefox=2 -d
 
 ### 步驟 5: 其他指令
 
-#### 只啟動 Selenium Grid
+#### Demo Dumpers
 
-如果您只想啟動 Selenium Grid (主控中心和瀏覽器節點) 以便進行開發或執行臨時任務，而不啟動主要的監控爬蟲，可以使用以下指令：
+`demo_dumpers` 資料夾中提供了一些腳本，用於手動抓取網頁內容或 API 回應，非常適合用於臨時的分析或除錯。
 
-```bash
-# 只啟動 Hub 和 Firefox 節點
-docker-compose up -d selenium firefox
+**1. Selenium Dumper (抓取動態網頁)**
 
-# 如果也需要 Chrome 節點
-docker-compose up -d selenium firefox --profile chrome
-```
-
-Grid 啟動後，您可以執行任意需要瀏覽器的腳本。
-
-#### 手動抓取網頁 HTML
-
-本專案提供一個 `dumper` 服務，可以用來抓取指定網址的 HTML 內容，非常適合用於臨時的網頁結構分析或除錯。
+此腳本使用 Selenium 瀏覽器來抓取指定網址的 **最終 HTML** 內容。
 
 **使用方式：**
 
 ```bash
 # 請先確保 Selenium Grid 正在運行
-docker-compose run --rm dumper python3 html_dumper.py <您要抓取的網址>
+docker-compose run --rm dumper python3 demo_dumpers/selenium_dumper.py <您要抓取的網址>
 ```
 
 **範例：**
 
 ```bash
-docker-compose run --rm dumper python3 html_dumper.py https://www.pulamo.com.tw/
+docker-compose run --rm dumper python3 demo_dumpers/selenium_dumper.py https://www.pulamo.com.tw/
+```
+
+**2. Requests Dumper (抓取 API)**
+
+此腳本使用 `requests` 直接請求指定的 URL，適合用來測試 API 或抓取靜態網頁的 JSON/HTML 回應。
+
+**使用方式：**
+
+```bash
+# 此腳本不需 Selenium Grid
+docker-compose run --rm dumper python3 demo_dumpers/requests_dumper.py <您要抓取的網址>
+```
+
+**範例：**
+
+```bash
+docker-compose run --rm dumper python3 demo_dumpers/requests_dumper.py https://rtapi.ruten.com.tw/api/search/v3/index.php/core/prod?q=mgsd
 ```
 
 ---
@@ -239,11 +250,11 @@ docker-compose -f docker-compose.test.yml down
 ```
 
 預期結果範例 (若商品未上架):
-```
+'''
 INFO - --- 開始檢查商品狀態 (測試案例) ---
 INFO - 未找到符合條件的 獵魔鋼彈 (測試案例) 已售完或未上架
 INFO - --- 商品狀態檢查結束 (測試案例) ---
-```
+'''
 
 #### 露天拍賣功能測試
 
@@ -264,13 +275,15 @@ docker-compose run --rm scraper pytest -m docker tests/test_ruten_functional.py
 - `models.py`: 定義專案中使用的資料模型，例如 `Product`。
 - `factory.py`: 負責動態載入和實例化各種插件 (Scraper, Checker, Notifier)。
 - `processors/`: 存放所有任務處理邏輯的插件。
-    - `__init__.py`: 將此目錄標記為 Python 套件。
     - `pulamo.py`: 處理 Pulamo 網站的任務邏輯。
     - `ruten.py`: 處理露天拍賣網站的任務邏輯，並包含通知冷卻管理器。
 - `scrapers/`: 存放所有網站的爬蟲插件。
-    - `base.py`: 爬蟲插件的抽象基礎類別。
+    - `base.py`: 所有爬蟲插件的抽象基礎類別。
+    - `api_scraper.py`: 基於 `requests` 的爬蟲基礎類別。
+    - `selenium_scraper.py`: 基於 `Selenium` 的爬蟲基礎類別。
     - `pulamo.py`: 針對 Pulamo 網站的爬蟲實作。
-    - `ruten.py`: 針對露天拍賣網站的爬蟲實作，包含搜尋頁和商品頁的爬蟲。
+    - `ruten.py`: 針對露天拍賣網站的 **Selenium** 爬蟲實作。
+    - `ruten_api.py`: 針對露天拍賣網站的 **API** 爬蟲實作，效率更高。
 - `checkers/`: 存放所有商品檢查邏輯的插件。
     - `base.py`: 檢查邏輯插件的抽象基礎類別。
     - `product.py`: 針對商品關鍵字和價格的檢查實作。
@@ -279,19 +292,14 @@ docker-compose run --rm scraper pytest -m docker tests/test_ruten_functional.py
 - `notifiers/`: 存放所有通知模組的插件。
     - `base.py`: 通知模組插件的抽象基礎類別。
     - `telegram.py`: 針對 Telegram 的通知實作。
-- `html_dumper.py`: 提供手動抓取指定網頁 HTML 內容的功能。
+- `demo_dumpers/`: 包含用於手動分析和除錯的腳本。
+    - `selenium_dumper.py`: 使用 Selenium 抓取動態網頁的 HTML。
+    - `requests_dumper.py`: 使用 requests 抓取靜態網頁或 API 回應。
 - `docker-compose.yml`: 定義和管理**主要監控服務**的 Docker 設定 (包含 Selenium Hub, Chrome Node, 和 Firefox Node)。
 - `docker-compose.test.yml`: 定義和管理**整合測試**的 Docker 設定 (使用 Selenium Grid)。
 - `Dockerfile`: 建立 Python 應用程式 Docker 映像檔的說明書。
 - `requirements.txt`: Python 依賴套件列表。
 - `tests/`: 存放所有單元測試和功能測試檔案。
-    - `api_test.py`: 臨時的 API 測試腳本。
-    - `test_checker.py`: 針對商品檢查邏輯的單元測試。
-    - `test_notifier.py`: 針對通知模組的單元測試。
-    - `test_scrapers_pulamo.py`: 針對 Pulamo 爬蟲的功能測試。
-    - `test_scrapers_pulamo_unit.py`: 針對 Pulamo 爬蟲的單元測試。
-    - `test_ruten_unit.py`: 針對 Ruten 爬蟲的單元測試。
-    - `test_factory.py`: 針對工廠模式的單元測試。
 - `README.md`: 本說明文件。
 
 ---
@@ -308,3 +316,4 @@ docker-compose run --rm scraper pytest -m docker tests/test_ruten_functional.py
 ```
 scraper  | YYYY-MM-DDTHH:MM:SS.sssssssssZ INFO - --- 開始新一輪檢查 ---
 ```
+""

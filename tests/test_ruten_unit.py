@@ -11,12 +11,12 @@ from checkers.stock import StockChecker, PaymentMethod
 @pytest.fixture
 def ruten_search_scraper():
     # We don't need a real grid_url for unit testing parsing logic
-    with patch('scrapers.base.BaseScraper._initialize_driver', return_value=None):
-        return RutenSearchScraper(grid_url="", browser='chrome')
+    with patch('scrapers.selenium_scraper.SeleniumScraper._initialize_driver', return_value=None):
+        yield RutenSearchScraper(grid_url="http://fake-grid-url")
 
 @pytest.fixture
 def ruten_page_scraper():
-    with patch('scrapers.base.BaseScraper._initialize_driver', return_value=None):
+    with patch('scrapers.selenium_scraper.SeleniumScraper._initialize_driver', return_value=None):
         return RutenProductPageScraper(grid_url="", browser='chrome')
 
 @pytest.fixture
@@ -95,19 +95,20 @@ def sample_products_for_filtering():
 @pytest.fixture
 def sample_products_for_stock_check():
     return [
-        Product(title="Product A", price=100, url="", in_stock=False, seller="seller_A"),
-        Product(title="Product B", price=200, url="", in_stock=True, seller="seller_B"),
-        Product(title="Product C", price=300, url="", in_stock=True, seller="blacklisted_seller"),
-        Product(title="Product D", price=50, url="", in_stock=True, seller="seller_D"),
+        Product(title='Product A', price=100, in_stock=True, url='http://example.com/a', seller='seller_A', payment_methods=['PChomePay支付連 信用卡']),
+        Product(title='Product B', price=200, in_stock=True, url='http://example.com/b', seller='seller_B', payment_methods=['PChomePay支付連 現金 (ATM、餘額、銀行支付)']),
+        Product(title='Product C', price=300, in_stock=True, url='http://example.com/c', seller='blacklisted_seller', payment_methods=['PW_FAMI_COD']),
+        Product(title='Product D', price=50, in_stock=True, url='http://example.com/d', seller='seller_D', payment_methods=['PW_SEVEN_COD', 'PChomePay支付連 信用卡']),
+        Product(title='Product E', price=500, in_stock=False, url='http://example.com/e', seller='seller_E', payment_methods=['PW_SEVEN_COD'])
     ]
 
 @pytest.fixture
 def sample_products_for_payment_check():
     return [
-        Product(title="Product A", price=100, in_stock=True, seller="seller_A", url="http://example.com/a", payment_methods=['PW_SEVEN_COD']),
-        Product(title="Product B", price=200, in_stock=True, seller="seller_B", url="http://example.com/b", payment_methods=['PW_FAMILY_COD']),
-        Product(title="Product C", price=300, in_stock=True, seller="seller_C", url="http://example.com/c", payment_methods=['PChomePay支付連 信用卡']),
-        Product(title="Product D", price=400, in_stock=True, seller="seller_D", url="http://example.com/d", payment_methods=['PW_SEVEN_COD', 'PChomePay支付連 信用卡']),
+        Product(title="Product A", price=100, in_stock=True, seller="seller_A", url="http://example.com/a", payment_methods=['SEVEN_COD']),
+        Product(title="Product B", price=200, in_stock=True, seller="seller_B", url="http://example.com/b", payment_methods=['FAMI_COD']),
+        Product(title="Product C", price=300, in_stock=True, seller="seller_C", url="http://example.com/c", payment_methods=['PP_CRD']),
+        Product(title="Product D", price=400, in_stock=True, seller="seller_D", url="http://example.com/d", payment_methods=['SEVEN_COD', 'PP_CRD']),
     ]
 
 # --- Unit Tests ---
@@ -168,8 +169,9 @@ def test_stock_checker_found_all_valid(sample_products_for_stock_check):
     checker = StockChecker()
     products, stats = checker.check(sample_products_for_stock_check, {})
     
-    assert len(products) == 3
+    assert len(products) == 4
     found_titles = [p.title for p in products]
+    assert "Product A" in found_titles
     assert "Product B" in found_titles
     assert "Product C" in found_titles
     assert "Product D" in found_titles
@@ -188,26 +190,23 @@ def test_stock_checker_price_rejection(sample_products_for_stock_check):
     params = {'max_price': 150}
     products, stats = checker.check(sample_products_for_stock_check, params)
     
-    # Only Product D (price 50) should be found.
-    assert len(products) == 1
-    assert products[0].title == "Product D"
+    assert len(products) == 2
+    found_titles = {p.title for p in products}
+    assert found_titles == {"Product A", "Product D"}
     
-    # Both B and C should be rejected due to price.
     assert len(stats['rejected_due_to_price']) == 2
-    assert "Product B" in stats['rejected_due_to_price']
-    assert "Product C" in stats['rejected_due_to_price']
+    rejected_titles = {t for t in stats['rejected_due_to_price']}
+    assert rejected_titles == {"Product B", "Product C"}
 
 def test_stock_checker_seller_rejection(sample_products_for_stock_check):
     """Test the stock checker rejects an item if the seller is blacklisted."""
     checker = StockChecker()
     params = {'blacklisted_sellers': ['blacklisted_seller']}
-    # We expect Product B and D to be found, as Product C's seller is blacklisted
     products, stats = checker.check(sample_products_for_stock_check, params)
     
-    assert len(products) == 2
-    found_titles = [p.title for p in products]
-    assert "Product B" in found_titles
-    assert "Product D" in found_titles
+    assert len(products) == 3
+    found_titles = {p.title for p in products}
+    assert found_titles == {"Product A", "Product B", "Product D"}
 
     assert len(stats['rejected_due_to_seller']) == 1
     assert stats['rejected_due_to_seller'][0] == "Product C"
@@ -220,11 +219,12 @@ def test_stock_checker_payment_method_rejection(sample_products_for_payment_chec
     }
     found_products, stats = checker.check(sample_products_for_payment_check, params)
     assert len(found_products) == 2
-    assert "Product A" in [p.title for p in found_products]
-    assert "Product D" in [p.title for p in found_products]
+    found_titles = {p.title for p in found_products}
+    assert found_titles == {"Product A", "Product D"}
+    
     assert len(stats["rejected_due_to_payment_method"]) == 2
-    assert "Product B" in stats["rejected_due_to_payment_method"]
-    assert "Product C" in stats["rejected_due_to_payment_method"]
+    rejected_titles = {t for t in stats["rejected_due_to_payment_method"]}
+    assert rejected_titles == {"Product B", "Product C"}
 
 def test_stock_checker_payment_method_acceptance(sample_products_for_payment_check):
     """Test that the checker accepts products with acceptable payment methods."""
@@ -234,9 +234,9 @@ def test_stock_checker_payment_method_acceptance(sample_products_for_payment_che
     }
     found_products, stats = checker.check(sample_products_for_payment_check, params)
     assert len(found_products) == 3
-    assert "Product A" in [p.title for p in found_products]
-    assert "Product B" in [p.title for p in found_products]
-    assert "Product D" in [p.title for p in found_products]
+    found_titles = {p.title for p in found_products}
+    assert found_titles == {"Product A", "Product B", "Product D"}
+
     assert len(stats["rejected_due_to_payment_method"]) == 1
     assert "Product C" in stats["rejected_due_to_payment_method"]
 
@@ -247,3 +247,4 @@ def test_stock_checker_no_payment_method_filter(sample_products_for_payment_chec
     found_products, stats = checker.check(sample_products_for_payment_check, params)
     assert len(found_products) == 4
     assert len(stats["rejected_due_to_payment_method"]) == 0
+

@@ -8,6 +8,7 @@ from notifiers.telegram import TelegramNotifier
 
 # Import new Ruten components
 from scrapers.ruten import RutenSearchScraper, RutenProductPageScraper
+from scrapers.ruten_api import RutenProductPageAPIScraper, RutenSearchAPIScraper
 from checkers.keyword import KeywordChecker
 from checkers.stock import StockChecker
 
@@ -19,7 +20,9 @@ from notifiers.base import BaseNotifier
 SCRAPERS = {
     'pulamo.PulamoScraper': PulamoScraper,
     'ruten.RutenSearchScraper': RutenSearchScraper,
+    'ruten_api.RutenSearchAPIScraper': RutenSearchAPIScraper, # <--- 新增的 API Scraper
     'ruten.RutenProductPageScraper': RutenProductPageScraper,
+    'ruten_api.RutenProductPageAPIScraper': RutenProductPageAPIScraper,
 }
 
 CHECKERS = {

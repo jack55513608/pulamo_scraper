@@ -66,7 +66,7 @@ TASKS = [
         'name': 'Ruten - Destiny Gundam',
         'type': 'ruten',
         'browser': 'firefox',
-        'search_scraper': 'ruten.RutenSearchScraper',
+        'search_scraper': 'ruten_api.RutenSearchAPIScraper', # <--- 使用新的 API Scraper
         'search_scraper_params': {
             'search_url': 'https://www.ruten.com.tw/find/?q=mgsd+%E5%91%BD%E9%81%8B&prc.now=900-1400',
         },
@@ -75,7 +75,7 @@ TASKS = [
             'keywords': ['mgsd', '命運鋼彈'],
             'exclude_keywords': ['魔物語', 'ps5', 'ns2', '非'] # Exclude game pre-orders
         },
-        'page_scraper': 'ruten.RutenProductPageScraper',
+        'page_scraper': 'ruten_api.RutenProductPageAPIScraper',
         'stock_checker': 'stock.StockChecker',
         'stock_checker_params': {
             'max_price': 2000,

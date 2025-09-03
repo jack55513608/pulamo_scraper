@@ -3,7 +3,7 @@ import logging
 import time
 from selenium import webdriver
 from selenium.webdriver.remote.webdriver import WebDriver
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 import config
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -16,11 +16,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def initialize_driver() -> WebDriver | None:
     """Sets up and connects to the Selenium Grid."""
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument(
+    options = FirefoxOptions()
+    options.set_preference('permissions.default.image', 2)
+    options.set_preference('permissions.default.stylesheet', 2)
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument(
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     )
@@ -29,7 +31,7 @@ def initialize_driver() -> WebDriver | None:
         try:
             logging.info(f"Connecting to Selenium Grid (Attempt {attempt + 1}/{config.MAX_RETRIES})...")
             driver = webdriver.Remote(
-                command_executor=config.SELENIUM_GRID_URL, options=chrome_options
+                command_executor=config.SELENIUM_GRID_URL, options=options
             )
             logging.info("Successfully connected to Selenium Grid!")
             return driver
@@ -54,17 +56,15 @@ def dump_html(url: str):
 
     try:
         driver.get(url)
-        WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "rt-product-card"))
-        )
-        logging.info("頁面載入成功，正在輸出 HTML 內容...")
-        soup = BeautifulSoup(driver.page_source, "html.parser")
-        product_links = soup.find_all("a", class_="rt-product-card-name-wrap")
-        if product_links:
-            print(product_links[2]["href"])
-        else:
-            logging.warning("沒有找到任何商品連結。")
-        logging.info("HTML 內容輸出完畢。")
+        # Wait for the main product container to be present
+        wait = WebDriverWait(driver, 20)
+        wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+        logging.info("Page body has loaded.")
+
+        print("--- Full Page Source ---")
+        print(driver.page_source)
+        print("------------------------")
+
     except Exception as e:
         logging.error(f"抓取頁面時發生錯誤: {e}", exc_info=True)
     finally:

@@ -119,16 +119,25 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
 
 ### 步驟 4: 啟動主要監控程式
 
-此指令會啟動 Selenium Grid 和持續監控服務。
+此指令會啟動預設的服務，包含 Selenium Hub、Firefox 節點以及應用程式本身。
 
 ```bash
-# 建立 Docker 映像檔並啟動所有服務 (背景執行)
+# 建立 Docker 映像檔並啟動所有預設服務 (背景執行)
 docker-compose up --build -d
 ```
 
 若要停止服務：
 ```bash
 docker-compose down
+```
+
+#### 啟動 Chrome 瀏覽器節點 (可選)
+
+`Chrome` 節點被設定為一個獨立的 `profile`，預設不會啟動。如果您需要使用 Chrome 進行測試或爬取，可以使用以下指令來啟動它：
+
+```bash
+# 啟動預設服務外，再加上 profile 為 chrome 的服務
+docker-compose up --profile chrome -d
 ```
 
 #### 擴展瀏覽器節點
@@ -150,7 +159,11 @@ docker-compose up --scale firefox=2 -d
 如果您只想啟動 Selenium Grid (主控中心和瀏覽器節點) 以便進行開發或執行臨時任務，而不啟動主要的監控爬蟲，可以使用以下指令：
 
 ```bash
-docker-compose up -d selenium chrome
+# 只啟動 Hub 和 Firefox 節點
+docker-compose up -d selenium firefox
+
+# 如果也需要 Chrome 節點
+docker-compose up -d selenium firefox --profile chrome
 ```
 
 Grid 啟動後，您可以執行任意需要瀏覽器的腳本。

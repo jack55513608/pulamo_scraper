@@ -1,5 +1,6 @@
 # tests/test_ruten_unit.py
 import pytest
+from unittest.mock import patch
 from bs4 import BeautifulSoup
 from models import Product
 from scrapers.ruten import RutenSearchScraper, RutenProductPageScraper
@@ -10,11 +11,13 @@ from checkers.stock import StockChecker, PaymentMethod
 @pytest.fixture
 def ruten_search_scraper():
     # We don't need a real grid_url for unit testing parsing logic
-    return RutenSearchScraper(grid_url="")
+    with patch('scrapers.base.BaseScraper._initialize_driver', return_value=None):
+        return RutenSearchScraper(grid_url="", browser='chrome')
 
 @pytest.fixture
 def ruten_page_scraper():
-    return RutenProductPageScraper(grid_url="")
+    with patch('scrapers.base.BaseScraper._initialize_driver', return_value=None):
+        return RutenProductPageScraper(grid_url="", browser='chrome')
 
 @pytest.fixture
 def sample_product_item_html():

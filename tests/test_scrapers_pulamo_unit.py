@@ -11,7 +11,7 @@ class TestPulamoScraperUnit(unittest.TestCase):
         # For unit testing _parse_product_card, we don't need a real driver.
         # So, we'll mock the _initialize_driver method during instantiation.
         with unittest.mock.patch('scrapers.pulamo.PulamoScraper._initialize_driver', return_value=None):
-            self.scraper = PulamoScraper(grid_url="http://mock_grid:4444/wd/hub")
+            self.scraper = PulamoScraper(grid_url="http://mock_grid:4444/wd/hub", browser='chrome')
 
     def test_parse_product_card_in_stock(self):
         html_snippet = """

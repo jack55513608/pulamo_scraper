@@ -64,6 +64,7 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
 # config.py
 {
     'name': 'Pulamo - Wing Gundam',
+    'browser': 'chrome', # 可選 'chrome' 或 'firefox'
     'scraper': 'pulamo.PulamoScraper',
     'scraper_params': {
         'search_url': 'https://www.pulamo.com.tw/products?search=MGSD',
@@ -92,6 +93,7 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
 {
     'name': 'Ruten - Destiny Gundam',
     'type': 'ruten',
+    'browser': 'firefox', # 可選 'chrome' 或 'firefox'
     'search_scraper': 'ruten.RutenSearchScraper',
     'search_scraper_params': {
         'search_url': 'https://www.ruten.com.tw/find/?q=mgsd+%E5%91%BD%E9%81%8B&prc.now=900-1400',
@@ -131,11 +133,14 @@ docker-compose down
 
 #### 擴展瀏覽器節點
 
-如果需要同時執行更多爬蟲任務，可以輕易地增加 Chrome 瀏覽器節點的數量：
+如果需要同時執行更多爬蟲任務，可以輕易地增加瀏覽器節點的數量。`docker-compose.yml` 中已預設包含 `chrome` 和 `firefox` 兩種瀏覽器節點。
 
 ```bash
 # 將 Chrome 節點擴展到 3 個
 docker-compose up --scale chrome=3 -d
+
+# 將 Firefox 節點擴展到 2 個
+docker-compose up --scale firefox=2 -d
 ```
 
 ### 步驟 5: 其他指令
@@ -257,7 +262,7 @@ docker-compose run --rm scraper pytest -m docker tests/test_ruten_functional.py
     - `base.py`: 通知模組插件的抽象基礎類別。
     - `telegram.py`: 針對 Telegram 的通知實作。
 - `html_dumper.py`: 提供手動抓取指定網頁 HTML 內容的功能。
-- `docker-compose.yml`: 定義和管理**主要監控服務**的 Docker 設定 (使用 Selenium Grid)。
+- `docker-compose.yml`: 定義和管理**主要監控服務**的 Docker 設定 (包含 Selenium Hub, Chrome Node, 和 Firefox Node)。
 - `docker-compose.test.yml`: 定義和管理**整合測試**的 Docker 設定 (使用 Selenium Grid)。
 - `Dockerfile`: 建立 Python 應用程式 Docker 映像檔的說明書。
 - `requirements.txt`: Python 依賴套件列表。

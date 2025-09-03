@@ -20,7 +20,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: '0.8'
     depends_on:
       selenium:
         condition: service_healthy
@@ -32,6 +32,24 @@ services:
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
     # 您可以使用以下指令來擴展節點數量，例如擴展到 3 個：
     # docker-compose up --scale chrome=3 -d
+
+  firefox: # Firefox 瀏覽器節點
+    image: selenium/node-firefox:latest
+    platform: linux/amd64
+    shm_size: 2g
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+    depends_on:
+      selenium:
+        condition: service_healthy
+    environment:
+      - SE_EVENT_BUS_HOST=selenium
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_NODE_MAX_SESSIONS=5
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
 
   # 您的應用服務
   scraper:

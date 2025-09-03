@@ -21,6 +21,7 @@ BLACKLISTED_SELLERS = [
 TASKS = [
     {
         'name': 'Pulamo - Wing Gundam',
+        'browser': 'firefox',
         'scraper': 'pulamo.PulamoScraper',
         'scraper_params': {
             'search_url': 'https://www.pulamo.com.tw/products?search=MGSD',
@@ -40,6 +41,7 @@ TASKS = [
     },
     {
         'name': 'Pulamo - Destiny Gundam',
+        'browser': 'firefox',
         'scraper': 'pulamo.PulamoScraper',
         'scraper_params': {
             'search_url': 'https://www.pulamo.com.tw/products?search=MGSD',
@@ -61,6 +63,7 @@ TASKS = [
     {
         'name': 'Ruten - Destiny Gundam',
         'type': 'ruten',
+        'browser': 'firefox',
         'search_scraper': 'ruten.RutenSearchScraper',
         'search_scraper_params': {
             'search_url': 'https://www.ruten.com.tw/find/?q=mgsd+%E5%91%BD%E9%81%8B&prc.now=900-1400',

@@ -17,7 +17,7 @@ async def test_pulamo_scraper_functional():
     try:
         # Instantiate PulamoScraper
         # This will connect to the Selenium Grid defined in config.SELENIUM_GRID_URL
-        scraper = PulamoScraper(config.SELENIUM_GRID_URL)
+        scraper = PulamoScraper(config.SELENIUM_GRID_URL, browser='chrome')
         with scraper:
             # Use the search URL for Wing Gundam as an example
             params = {'search_url': 'https://www.pulamo.com.tw/products?search=MGSD'}

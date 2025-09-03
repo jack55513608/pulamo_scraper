@@ -8,7 +8,7 @@ from notifiers.telegram import TelegramNotifier
 class TestFactory(unittest.TestCase):
 
     def test_get_scraper_returns_correct_class(self):
-        scraper_instance = get_scraper('pulamo.PulamoScraper', grid_url="http://test_grid")
+        scraper_instance = get_scraper('pulamo.PulamoScraper', grid_url="http://test_grid", browser='chrome')
         self.assertIsInstance(scraper_instance, PulamoScraper)
 
     def test_get_scraper_raises_error_for_unknown_name(self):

@@ -10,7 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-
+import config
 from models import Product
 from scrapers.base import BaseScraper
 from task_config_manager import task_config_manager

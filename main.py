@@ -5,6 +5,7 @@ import config
 from logger_config import setup_logger
 from factory import get_scraper, get_checker, get_notifier
 from task_config_manager import task_config_manager
+from notification_manager import notification_manager
 
 async def process_simple_task(task: dict):
     """
@@ -14,7 +15,7 @@ async def process_simple_task(task: dict):
     logging.info(f"--- 開始執行簡單任務: {task_name} ---")
 
     try:
-        scraper = get_scraper(task['scraper'], config.SELENIUM_GRID_URL)
+        scraper = get_scraper(task['scraper'], config.SELENIUM_GRID_URL, browser=task.get('browser', 'chrome'))
         checker = get_checker(task['checker'])
         notifier = get_notifier(task['notifier'])
 
@@ -56,11 +57,12 @@ async def process_ruten_task(task: dict):
         'out_of_stock': 0,
         'rejected_due_to_price': 0,
         'rejected_due_to_seller': 0,
+        'rejected_due_to_payment_method': 0,
     }
 
     try:
         # Step 1: Scrape the search result page
-        search_scraper = get_scraper(task['search_scraper'], config.SELENIUM_GRID_URL)
+        search_scraper = get_scraper(task['search_scraper'], config.SELENIUM_GRID_URL, browser=task.get('browser', 'chrome'))
         with search_scraper:
             all_products = search_scraper.scrape(task['search_scraper_params'])
         stats['total_searched'] = len(all_products)
@@ -78,7 +80,7 @@ async def process_ruten_task(task: dict):
             return
 
         # Step 3: Scrape product pages for stock info (sequential)
-        page_scraper = get_scraper(task['page_scraper'], config.SELENIUM_GRID_URL)
+        page_scraper = get_scraper(task['page_scraper'], config.SELENIUM_GRID_URL, browser=task.get('browser', 'chrome'))
         with page_scraper:
             detailed_products, page_scrape_stats = page_scraper.scrape(filtered_products, task.get('stock_checker_params', {}))
         stats['pages_scraped'] = len(detailed_products) - len(page_scrape_stats['failed_to_scrape'])
@@ -94,15 +96,34 @@ async def process_ruten_task(task: dict):
         stats['rejected_due_to_payment_method'] = len(stock_stats.get('rejected_due_to_payment_method', []))
 
 
-        # Step 5: Notify if any products are found
+        # Step 5: Filter out recently notified products and notify
         if found_products:
-            logging.info(f"在任務 '{task_name}' 中找到 {len(found_products)} 件目標商品。")
-            notifier = get_notifier(task['notifier'])
-            notification_tasks = [
-                notifier.notify(product, task['notifier_params'])
-                for product in found_products
-            ]
-            await asyncio.gather(*notification_tasks)
+            products_to_notify = []
+            for product in found_products:
+                if notification_manager.can_notify(product.url):
+                    products_to_notify.append(product)
+                else:
+                    logging.info(f"商品 '{product.title}' 在冷卻期間，本次不通知。")
+            
+            if products_to_notify:
+                logging.info(f"在任務 '{task_name}' 中找到 {len(products_to_notify)} 件新商品。")
+                notifier = get_notifier(task['notifier'])
+                
+                notification_tasks = []
+                for product in products_to_notify:
+                    # By creating a task, we can await its completion
+                    # and then record the notification.
+                    task_to_run = notifier.notify(product, task['notifier_params'])
+                    notification_tasks.append(task_to_run)
+
+                # Wait for all notifications to be sent
+                await asyncio.gather(*notification_tasks)
+
+                # Record notifications for products that were successfully notified
+                for product in products_to_notify:
+                    notification_manager.record_notification(product.url)
+            else:
+                logging.info(f"所有找到的商品都在冷卻期間，本次不通知。")
         else:
             logging.info(f"未找到符合條件且有庫存的商品。")
 
@@ -125,7 +146,7 @@ async def main():
     """
     Main function to initialize and run the scraper and checks in a loop.
     """
-    setup_logger()
+    setup_logger(logging.DEBUG)
     logging.info("--- 開始執行持續監控任務 ---")
     try:
         while True:

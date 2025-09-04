@@ -1,4 +1,5 @@
 # notifiers/telegram.py
+import asyncio
 import logging
 from telegram import Bot
 from telegram.error import TelegramError
@@ -14,16 +15,19 @@ class TelegramNotifier(BaseNotifier):
     def __init__(self):
         if config.TELEGRAM_BOT_TOKEN:
             self.bot = Bot(token=config.TELEGRAM_BOT_TOKEN)
+            # Create a semaphore to limit concurrent requests to Telegram
+            self.semaphore = asyncio.Semaphore(1)
         else:
             self.bot = None
+            self.semaphore = None
             logging.warning("Telegram Bot Token 未設定，將不會發送通知。")
 
     async def notify(self, product: Product, params: dict):
         """
-        Sends a notification about a found product.
+        Sends a notification about a found product, using a semaphore to ensure durability.
         """
-        if not self.bot or not config.TELEGRAM_CHAT_ID:
-            logging.warning("Bot instance 或 Chat ID 未提供，無法發送通知。")
+        if not self.bot or not self.semaphore or not config.TELEGRAM_CHAT_ID:
+            logging.warning("Bot instance, semaphore, or Chat ID 未提供，無法發送通知。")
             return
 
         product_name = params.get("name", "商品")
@@ -36,8 +40,10 @@ class TelegramNotifier(BaseNotifier):
         message = f"[{timestamp}]\n店家: {store_name}\n商品: {product.title}\n價格: {product.price}\n狀態: 有貨"
         message += f'\n<a href="{product.url}">點此查看商品頁面</a>'
 
-        try:
-            await self.bot.send_message(chat_id=config.TELEGRAM_CHAT_ID, text=message, parse_mode='HTML')
-            logging.info("已成功發送 Telegram 通知。")
-        except TelegramError as e:
-            logging.error(f"發送 Telegram 通知時發生錯誤: {e}")
+        # Acquire the semaphore before sending the message
+        async with self.semaphore:
+            try:
+                await self.bot.send_message(chat_id=config.TELEGRAM_CHAT_ID, text=message, parse_mode='HTML')
+                logging.info(f"已成功為 '{product.title}' 發送 Telegram 通知。")
+            except TelegramError as e:
+                logging.error(f"為 '{product.title}' 發送 Telegram 通知時發生錯誤: {e}")

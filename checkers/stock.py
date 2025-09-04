@@ -52,12 +52,12 @@ class StockChecker(BaseChecker):
 
             # Product is in stock, now check other criteria
             if max_price is not None and product.price > max_price:
-                logging.info(f"StockChecker: 商品 '{product.title}' 有庫存，但價格 ${product.price} > ${max_price}，予以跳過。")
+                logging.debug(f"StockChecker: 商品 '{product.title}' 有庫存，但價格 ${product.price} > ${max_price}，予以跳過。")
                 stats['rejected_due_to_price'].append(product.title)
                 continue
 
             if product.seller and product.seller in blacklisted_sellers:
-                logging.info(f"StockChecker: 商品 '{product.title}' 的賣家 '{product.seller}' 在黑名單中，予以跳過。")
+                logging.debug(f"StockChecker: 商品 '{product.title}' 的賣家 '{product.seller}' 在黑名單中，予以跳過。")
                 stats['rejected_due_to_seller'].append(product.title)
                 continue
 
@@ -70,7 +70,7 @@ class StockChecker(BaseChecker):
                         break
                 
                 if not product_has_acceptable_payment:
-                    logging.info(f"StockChecker: 商品 '{product.title}' 的付款方式不符合要求，予以跳過。")
+                    logging.debug(f"StockChecker: 商品 '{product.title}' 的付款方式不符合要求，予以跳過。")
                     stats['rejected_due_to_payment_method'].append(product.title)
                     continue
 

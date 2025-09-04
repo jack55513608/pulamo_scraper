@@ -48,18 +48,6 @@ class RutenSearchAPIScraper(APIScraper):
         user_api_params = {k: v[0] for k, v in query_params.items()}
         api_params = {**default_api_params, **user_api_params}
 
-        # and merge them with parameters from the search_url.
-        default_api_params = {
-            'type': 'direct',
-            'sort': 'rnk/dc',
-            'limit': '100', # Fetch more results to be safe
-            'offset': '1'
-        }
-
-        # Parameters from the URL will override the defaults
-        user_api_params = {k: v[0] for k, v in query_params.items()}
-        api_params = {**default_api_params, **user_api_params}
-
         headers = {
             'accept': 'application/json, text/plain, */*',
             'content-type': 'application/x-www-form-urlencoded',
@@ -72,7 +60,6 @@ class RutenSearchAPIScraper(APIScraper):
 
         try:
             # 3. Call the first API to get product IDs
-            logging.info(f"Calling Ruten Search API with params: {api_params}")
             id_response = requests.get(self.SEARCH_API_URL, params=api_params, headers=headers)
             id_response.raise_for_status()
             id_data = id_response.json()
@@ -124,7 +111,46 @@ class RutenSearchAPIScraper(APIScraper):
 
 
 class RutenProductPageAPIScraper(APIScraper):
-    """Scrapes individual Ruten product pages using a direct HTTP request."""
+    """
+    Scrapes individual Ruten product pages using a direct HTTP request to get
+    the RT.context, and then hits a second API to get the true price range.
+    """
+    PRICE_API_URL = "https://rapi.ruten.com.tw/api/items/v2/list"
+
+    def _get_product_id_from_url(self, url: str) -> str:
+        """Extracts the product ID from the product URL."""
+        return url.split('?')[-1]
+
+    def _get_accurate_price(self, product_id: str) -> int:
+        """
+        Hits the secondary price API to get the accurate minimum price
+        of in-stock items.
+        """
+        try:
+            params = {'gno': product_id, 'level': 'simple'}
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            }
+            response = requests.get(self.PRICE_API_URL, params=params, headers=headers)
+            response.raise_for_status()
+            json_data = response.json()
+
+            product_list = json_data.get('data', [])
+
+            if product_list and 'goods_price_range' in product_list[0]:
+                min_price = product_list[0]['goods_price_range'].get('min')
+                if min_price is not None:
+                    return min_price
+            else:
+                logging.warning(f"Could not find product data or price range in API response for {product_id}")
+
+        except requests.exceptions.RequestException as e:
+            logging.warning(f"Could not fetch accurate price for {product_id}: {e}")
+        except (json.JSONDecodeError, IndexError, KeyError) as e:
+            logging.warning(f"Could not parse accurate price for {product_id}: {e}")
+        
+        return None
+
 
     def scrape(self, products: List[Product], params: dict) -> Tuple[List[Product], Dict[str, Any]]:
         """
@@ -160,13 +186,26 @@ class RutenProductPageAPIScraper(APIScraper):
 
                 item_info = data.get('item', {})
                 seller_info = data.get('seller', {})
+                product_id = item_info.get('no')
 
                 # Update product details with more accurate data from the API
                 product.title = item_info.get('name', product.title)
-                product.price = int(item_info.get('directPrice', product.price))
                 product.in_stock = item_info.get('remainNum', 0) > 0
                 product.seller = seller_info.get('nick')
                 product.payment_methods = item_info.get('payment', [])
+
+                # New Step: Get the accurate price from the secondary API
+                if product_id:
+                    accurate_price = self._get_accurate_price(product_id)
+                    if accurate_price is not None:
+                        product.price = accurate_price
+                    else:
+                        # Fallback to the price from RT.context if the new API fails
+                        product.price = int(item_info.get('directPrice', product.price))
+                else:
+                    # Fallback if we can't even get a product ID
+                    product.price = int(item_info.get('directPrice', product.price))
+
 
                 if not product.in_stock:
                     stats['out_of_stock_after_scrape'].append(product.title)

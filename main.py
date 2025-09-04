@@ -21,8 +21,8 @@ async def main():
                 task_type = task.get('type', 'pulamo') # Default to pulamo
                 if task_type == 'ruten':
                     tasks_to_run.append(process_ruten_task(task))
-                # elif task_type == 'pulamo':
-                #     tasks_to_run.append(process_pulamo_task(task))
+                elif task_type == 'pulamo':
+                    tasks_to_run.append(process_pulamo_task(task))
             
             await asyncio.gather(*tasks_to_run)
 

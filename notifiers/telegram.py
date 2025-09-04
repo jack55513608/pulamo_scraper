@@ -12,13 +12,18 @@ import pytz
 class TelegramNotifier(BaseNotifier):
     """A notifier for sending messages via Telegram."""
 
-    def __init__(self):
-        if config.TELEGRAM_BOT_TOKEN:
+    def __init__(self, bot=None):
+        if bot:
+            self.bot = bot
+        elif config.TELEGRAM_BOT_TOKEN:
             self.bot = Bot(token=config.TELEGRAM_BOT_TOKEN)
-            # Create a semaphore to limit concurrent requests to Telegram
-            self.semaphore = asyncio.Semaphore(1)
         else:
             self.bot = None
+        
+        if self.bot:
+            # Create a semaphore to limit concurrent requests to Telegram
+            self.semaphore = asyncio.Semaphore(5)
+        else:
             self.semaphore = None
             logging.warning("Telegram Bot Token 未設定，將不會發送通知。")
 

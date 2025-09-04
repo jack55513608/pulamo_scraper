@@ -7,9 +7,9 @@ from factory import get_scraper, get_checker, get_notifier
 import asyncio
 import logging
 import time
-from typing import Dict
+from typing import Dict, Callable, Optional
 import config
-from factory import get_scraper, get_checker, get_notifier
+from factory import get_scraper as default_get_scraper, get_checker as default_get_checker, get_notifier as default_get_notifier
 
 class NotificationManager:
     _instance = None
@@ -37,7 +37,12 @@ class NotificationManager:
 # Singleton instance
 notification_manager = NotificationManager()
 
-async def process_ruten_task(task: dict):
+async def process_ruten_task(
+    task: dict,
+    get_scraper: Callable = default_get_scraper,
+    get_checker: Callable = default_get_checker,
+    get_notifier: Callable = default_get_notifier
+):
     """
     Processes a multi-step task specifically for Ruten.
     """

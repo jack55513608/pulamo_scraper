@@ -111,7 +111,8 @@ TELEGRAM_CHAT_ID="在此填入您的 Chat ID"
     'page_scraper': 'ruten_api.RutenProductPageAPIScraper',
     'stock_checker': 'stock.StockChecker',
     'stock_checker_params': {
-        'max_price': 2000,
+        'min_price': 900,
+        'max_price': 1400,
         'blacklisted_sellers': ['seller_id_to_block_1', 'seller_id_to_block_2'],
     },
     'notifier': 'telegram.TelegramNotifier',
@@ -188,13 +189,13 @@ docker-compose run --rm dumper python3 demo_dumpers/selenium_dumper.py https://w
 
 ```bash
 # 此腳本不需 Selenium Grid
-docker-compose run --rm dumper python3 demo_dumpers/requests_dumper.py <您要抓取的網址>
+docker-compose run --rm dumper python3 demo_dumpers/requests_dumper.py "<您要抓取的網址>"
 ```
 
 **範例：**
 
 ```bash
-docker-compose run --rm dumper python3 demo_dumpers/requests_dumper.py https://rtapi.ruten.com.tw/api/search/v3/index.php/core/prod?q=mgsd
+docker-compose run --rm dumper python3 demo_dumpers/requests_dumper.py "https://rapi.ruten.com.tw/api/items/v2/list?gno=22536771547054&level=simple"
 ```
 
 ---
@@ -283,7 +284,7 @@ docker-compose run --rm scraper pytest -m docker tests/test_ruten_functional.py
     - `selenium_scraper.py`: 基於 `Selenium` 的爬蟲基礎類別。
     - `pulamo.py`: 針對 Pulamo 網站的爬蟲實作。
     - `ruten.py`: 針對露天拍賣網站的 **Selenium** 爬蟲實作。
-    - `ruten_api.py`: 針對露天拍賣網站的 **API** 爬蟲實作，效率更高。
+    - `ruten_api.py`: 針對露天拍賣網站的 **API** 爬蟲實作。此爬蟲會透過多個 API 呼叫來取得最準確的商品價格與庫存狀態。
 - `checkers/`: 存放所有商品檢查邏輯的插件。
     - `base.py`: 檢查邏輯插件的抽象基礎類別。
     - `product.py`: 針對商品關鍵字和價格的檢查實作。
@@ -291,7 +292,7 @@ docker-compose run --rm scraper pytest -m docker tests/test_ruten_functional.py
     - `stock.py`: 檢查商品庫存狀態的檢查器。
 - `notifiers/`: 存放所有通知模組的插件。
     - `base.py`: 通知模組插件的抽象基礎類別。
-    - `telegram.py`: 針對 Telegram 的通知實作。
+    - `telegram.py`: 針對 Telegram 的通知實作。使用 `Semaphore` 來確保大量通知的可靠性。
 - `demo_dumpers/`: 包含用於手動分析和除錯的腳本。
     - `selenium_dumper.py`: 使用 Selenium 抓取動態網頁的 HTML。
     - `requests_dumper.py`: 使用 requests 抓取靜態網頁或 API 回應。
@@ -316,4 +317,4 @@ docker-compose run --rm scraper pytest -m docker tests/test_ruten_functional.py
 ```
 scraper  | YYYY-MM-DDTHH:MM:SS.sssssssssZ INFO - --- 開始新一輪檢查 ---
 ```
-""
+"""

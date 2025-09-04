@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   selenium: # 測試用的 Hub
     image: seleniarm/hub

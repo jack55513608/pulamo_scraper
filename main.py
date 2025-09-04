@@ -11,6 +11,7 @@ async def main():
     Main function to initialize and run the scraper and checks in a loop.
     """
     setup_logger()
+    task_config_manager.load_configs()
     logging.info("--- 開始執行持續監控任務 ---")
     try:
         while True:

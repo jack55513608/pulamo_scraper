@@ -78,7 +78,7 @@ TASKS = [
         'page_scraper': 'ruten_api.RutenProductPageAPIScraper',
         'stock_checker': 'stock.StockChecker',
         'stock_checker_params': {
-            'max_price': 1400,
+            'max_price': 2000,
             'min_price': 900,
             'blacklisted_sellers': BLACKLISTED_SELLERS,
             'acceptable_payment_methods': [

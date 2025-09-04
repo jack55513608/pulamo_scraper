@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   # Selenium Grid
   selenium: # Hub (主控中心)

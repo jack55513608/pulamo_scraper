@@ -22,7 +22,7 @@ class TelegramNotifier(BaseNotifier):
         
         if self.bot:
             # Create a semaphore to limit concurrent requests to Telegram
-            self.semaphore = asyncio.Semaphore(5)
+            self.semaphore = asyncio.Semaphore(1)
         else:
             self.semaphore = None
             logging.warning("Telegram Bot Token 未設定，將不會發送通知。")

@@ -9,10 +9,12 @@ class TaskConfigManager:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(TaskConfigManager, cls).__new__(cls)
-            cls._instance._load_configs()
+            # Initialize with empty configs, do not load automatically
+            cls._instance._tasks = []
+            cls._instance._blacklisted_sellers = []
         return cls._instance
 
-    def _load_configs(self):
+    def load_configs(self):
         """Loads configurations from the config module."""
         self._tasks = getattr(config, 'TASKS', [])
         self._blacklisted_sellers = getattr(config, 'BLACKLISTED_SELLERS', [])

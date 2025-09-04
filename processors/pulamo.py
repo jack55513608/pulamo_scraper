@@ -1,13 +1,23 @@
 # processors/pulamo.py
 import asyncio
 import logging
+from typing import Callable, Optional
 import config
-from factory import get_scraper, get_checker, get_notifier
+from factory import get_scraper as default_get_scraper, get_checker as default_get_checker, get_notifier as default_get_notifier
 
-async def process_pulamo_task(task: dict):
+async def process_pulamo_task(
+    task: dict,
+    get_scraper: Optional[Callable] = None,
+    get_checker: Optional[Callable] = None,
+    get_notifier: Optional[Callable] = None
+):
     """
     Processes a single, simple monitoring task for Pulamo.
     """
+    # Use default factory functions if no mocks are provided
+    get_scraper = get_scraper or default_get_scraper
+    get_checker = get_checker or default_get_checker
+    get_notifier = get_notifier or default_get_notifier
     task_name = task['name']
     logging.info(f"--- 開始執行 Pulamo 任務: {task_name} ---")
 
